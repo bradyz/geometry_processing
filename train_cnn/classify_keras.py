@@ -4,29 +4,19 @@ from keras.layers import Dense, Flatten, Input
 from keras.models import Model
 from keras.preprocessing.image import ImageDataGenerator
 
+import cv2
+import numpy as np
 
-TRAIN_DIR = '/home/04365/bradyz/data/ModelNetViewpoints/train/'
-VALID_DIR = '/home/04365/bradyz/data/ModelNetViewpoints/test/'
-SAVE_FILE = 'model_weights.h5'
-LOG_FILE = 'training.log'
-NUM_CLASSES = 10
-IMAGE_SIZE = 224
-TRAIN = 99775
-VALID = 5000
+from geometry_processing.utils.helpers import (TRAIN_DIR, VALID_DIR,
+        SAVE_FILE, LOG_FILE, IMAGE_SIZE, NUM_CLASSES, get_data)
 
 
 def train(model):
-    train_datagen = ImageDataGenerator(samplewise_center=True,
-            samplewise_std_normalization=True)
+    train_generator = get_data(TRAIN_DIR)
+    valid_generator = get_data(VALID_DIR)
 
-    train_generator = train_datagen.flow_from_directory(
-            TRAIN_DIR, target_size=(IMAGE_SIZE, IMAGE_SIZE), batch_size=64)
-
-    valid_datagen = ImageDataGenerator(samplewise_center=True,
-            samplewise_std_normalization=True)
-
-    valid_generator = valid_datagen.flow_from_directory(
-            VALID_DIR, target_size=(IMAGE_SIZE, IMAGE_SIZE), batch_size=64)
+    print("%d training samples." % train_generator.n)
+    print("%d validation samples." % valid_generator.n)
 
     model.compile(loss='categorical_crossentropy',
                   optimizer='sgd',
@@ -38,10 +28,10 @@ def train(model):
                                   patience=2, min_lr=0.001)
 
     model.fit_generator(generator=train_generator,
-            samples_per_epoch=TRAIN,
+            samples_per_epoch=train_generator.n,
             nb_epoch=10,
             validation_data=valid_generator,
-            nb_val_samples=VALID,
+            nb_val_samples=valid_generator.n,
             callbacks=[checkpointer, csv_logger, reduce_lr])
 
     model.save_weights(SAVE_FILE)
@@ -63,12 +53,11 @@ def load_model_vgg():
     x = Dense(NUM_CLASSES, activation='softmax', name='predictions')(x)
 
     model = Model(input=img_input, output=x)
-    # model.load_weights(SAVE_FILE, by_name=True)
+    model.load_weights(SAVE_FILE, by_name=True)
 
     return model
 
 
 if __name__ == "__main__":
     model = load_model_vgg()
-
     train(model)

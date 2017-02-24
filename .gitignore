@@ -1,1 +1,8 @@
 *.swp
+*.pyc
+__pycache__
+.DS_Store
+**/build
+
+
+train_cnn/model_weights.*
