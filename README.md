@@ -1,10 +1,14 @@
 ## Setup
 
-Clone the repo and add the package to the python path.
+Clone the repo, add the package to the python path, download python dependencies.
 
 ```
-git clone https://github.com/bradyz/geometry_processing.git
 PYTHONPATH=$(pwd):$PYTHONPATH
+git clone https://github.com/bradyz/geometry_processing.git
+
+pip install -r requirements.txt
+or
+pip install --user -r requirements.txt
 ```
 
 ## Data Dependencies
@@ -28,13 +32,17 @@ Preprocessing consists of centering the mesh, uniformly scaling the bounding box
 
 Currently there are 25 viewpoints being generated that fall around the unit sphere from 5 different phis and 5 different thetas (spherical coordinates).
 
+<img src="screenshots/sample_data.png" width="80%">
+
 ## Train CNN <a name="train_cnn"></a>
 
 The model used in this project is a VGG-16 with pretrained weights (ImageNet), with two additional layers fc1 (2048), fc2 (1024).
 
-Training was done for 10 epochs on 100k training images (4000 meshes) over 10 labels of ModelNet10. The images were 224 x 224 rgb. Cross entropy loss was used in combination with a SGD optimizer with a batch size of 64. Training took approximately 5 hours.
+Training was done for 10 epochs on 100k training images (4000 meshes) over 10 labels of ModelNet10. The images were 224 x 224 rgb. Cross entropy loss was used in combination with a SGD optimizer with a batch size of 64. Training took approximately 5 hours a NVIDIA K40 gpu.
 
 After training, classification accuracy, given a single pose, is at 80% on a test set of 20k images.
+
+<img src="screenshots/confusion_matrix.png" width="80%">
 
 ## Classifier <a name="classify"></a>
 
@@ -42,7 +50,7 @@ The question asked is - given a mesh and several viewpoints, does it help to use
 
 We use a one-vs-rest linear SVM, similar to MVCNN, to classify activation values of the final fc layer.
 
-The current methods consist of the using the following(currently unimplemented) -
+The current methods consist of the using the following (currently unimplemented) -
 
 * Sort by minimized entropy
 
