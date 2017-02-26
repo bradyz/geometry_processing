@@ -53,6 +53,8 @@ We use a one-vs-rest linear SVM, similar to MVCNN, to classify activation values
 The current methods consist of the using the following (currently unimplemented) -
 
 * Sort by minimized entropy
+* Random K
+* FPS (farthest point selection) on sorted
 
 ## References <a name="references"></a>
 

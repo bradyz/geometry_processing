@@ -2,13 +2,10 @@ from keras.applications.vgg16 import VGG16
 from keras.callbacks import CSVLogger, ModelCheckpoint, ReduceLROnPlateau
 from keras.layers import Dense, Flatten, Input
 from keras.models import Model
-from keras.preprocessing.image import ImageDataGenerator
 
-import cv2
-import numpy as np
-
-from geometry_processing.utils.helpers import (TRAIN_DIR, VALID_DIR,
-        SAVE_FILE, LOG_FILE, IMAGE_SIZE, NUM_CLASSES, get_data)
+from geometry_processing.globals import (TRAIN_DIR, VALID_DIR, SAVE_FILE,
+        LOG_FILE, IMAGE_SIZE, NUM_CLASSES)
+from geometry_processing.utils.helpers import get_data
 
 
 def train(model):

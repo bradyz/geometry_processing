@@ -13,14 +13,7 @@ import numpy as np
 from keras.callbacks import Callback
 from keras.preprocessing.image import ImageDataGenerator
 
-
-TRAIN_DIR = "/Users/bradyzhou/code/data/ModelNetViewpoints/train/"
-VALID_DIR = "/Users/bradyzhou/code/data/ModelNetViewpoints/test/"
-SAVE_FILE = "/Users/bradyzhou/code/geometry_processing/train_cnn/model_weights.h5"
-LOG_FILE = "/Users/bradyzhou/code/geometry_processing/train_cnn/training.log"
-IMAGE_SIZE = 224
-BATCH = 2
-NUM_CLASSES = 10
+from geometry_processing.globals import IMAGE_SIZE, BATCH
 
 
 class ManualInspection(Callback):
@@ -81,11 +74,11 @@ def resize_dataset(data, output_x, output_y):
     return result
 
 
-def get_data(data_path):
+def get_data(data_path, batch=BATCH):
     data_datagen = ImageDataGenerator(samplewise_center=True,
             samplewise_std_normalization=True)
     data_generator = data_datagen.flow_from_directory(
-            data_path, target_size=(IMAGE_SIZE, IMAGE_SIZE), batch_size=BATCH)
+            data_path, target_size=(IMAGE_SIZE, IMAGE_SIZE), batch_size=batch)
     return data_generator
 
 

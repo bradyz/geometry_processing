@@ -2,14 +2,15 @@ import numpy as np
 
 from sklearn.metrics import confusion_matrix
 
-from geometry_processing.utils.helpers import (TRAIN_DIR, VALID_DIR,
-        BATCH, NUM_CLASSES, get_data, plot_confusion_matrix)
+from geometry_processing.globals import VALID_DIR, BATCH, NUM_CLASSES
+from geometry_processing.utils.helpers import plot_confusion_matrix, get_data
 from geometry_processing.train_cnn.classify_keras import load_model_vgg
 
 
 NUM_SAMPLES = 1000
-USE_SAVE = True
 SAVE_FILE = 'confusion_matrix.npy'
+TRAIN = True
+USE_SAVE = True
 
 
 def get_class_labels(data_generator):
@@ -44,7 +45,7 @@ def add_to_confusion_matrix(matrix, data_generator):
         total += BATCH
         print("%-4.2f%%: %d samples processed." % (100*total/NUM_SAMPLES, total))
 
-    np.save('confusion_matrix.npy', matrix)
+    np.save(SAVE_FILE, matrix)
 
 
 if __name__ == '__main__':
@@ -56,6 +57,9 @@ if __name__ == '__main__':
 
     if USE_SAVE:
         matrix = np.load(SAVE_FILE)
+
+    if TRAIN:
+        add_to_confusion_matrix(matrix, data_generator)
 
     class_labels = get_class_labels(data_generator)
     plot_confusion_matrix(matrix, class_labels)
