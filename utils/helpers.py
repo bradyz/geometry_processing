@@ -75,11 +75,11 @@ def resize_dataset(data, output_x, output_y):
 
 
 def get_data(data_path, batch=BATCH):
-    data_datagen = ImageDataGenerator(samplewise_center=True,
-            samplewise_std_normalization=True)
-    data_generator = data_datagen.flow_from_directory(
-            data_path, target_size=(IMAGE_SIZE, IMAGE_SIZE), batch_size=batch)
-    return data_generator
+    data_datagen = ImageDataGenerator()
+    return data_datagen.flow_from_directory(data_path,
+            target_size=(IMAGE_SIZE, IMAGE_SIZE),
+            batch_size=batch,
+            shuffle=True)
 
 
 def plot_confusion_matrix(cm, classes,
@@ -122,3 +122,34 @@ def test_from_image(model, image):
     prediction = model.predict(image)
     class_name = np.argmax(prediction, axis=1)
     return prediction, class_name
+
+
+def get_mean_from_dir(dirname, batch_size=BATCH, num_batches=1000):
+    """
+    Iteratively calculate mean from a dataset too large to fit
+    in memory.
+
+    Args:
+        dirname (string) - directory with class labels and data.
+        batch_size (int) - number of samples to process in a batch.
+        num_batches (int) - terminate early after seeing x batches.
+    Returns:
+        (tuple), corresponding mean RGB values.
+    """
+    datagen = get_data(dirname, batch_size)
+
+    running_mean = np.zeros((3,), dtype=np.float64)
+    batches_seen = 0.0
+
+    for x, y in datagen:
+        # Terminate if datagen is exhausted or sampled sufficiently.
+        if datagen.batch_index == 0 and batches_seen != 0:
+            break
+        elif batches_seen >= num_batches:
+            break
+
+        # Accumulate statistics.
+        running_mean += np.mean(x, axis=(0, 1, 2))
+        batches_seen += x.shape[0] / batch_size
+
+    return running_mean / batches_seen

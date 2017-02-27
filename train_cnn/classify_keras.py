@@ -8,6 +8,9 @@ from geometry_processing.globals import (TRAIN_DIR, VALID_DIR, SAVE_FILE,
 from geometry_processing.utils.helpers import get_data
 
 
+USE_SAVE = True
+
+
 def train(model):
     train_generator = get_data(TRAIN_DIR)
     valid_generator = get_data(VALID_DIR)
@@ -50,7 +53,10 @@ def load_model_vgg():
     x = Dense(NUM_CLASSES, activation='softmax', name='predictions')(x)
 
     model = Model(input=img_input, output=x)
-    model.load_weights(SAVE_FILE, by_name=True)
+
+    if USE_SAVE:
+        print('Loading weights from %s.' % SAVE_FILE)
+        model.load_weights(SAVE_FILE, by_name=True)
 
     return model
 
