@@ -1,6 +1,6 @@
 from keras.applications.vgg16 import VGG16
 from keras.callbacks import CSVLogger, ModelCheckpoint, ReduceLROnPlateau
-from keras.layers import Dense, Flatten, Input
+from keras.layers import Dense, Flatten, Input, Dropout
 from keras.models import Model
 
 from geometry_processing.globals import (TRAIN_DIR, VALID_DIR, SAVE_FILE,
@@ -48,8 +48,11 @@ def load_model_vgg():
 
     x = base_model.output
     x = Flatten(name='flatten')(x)
+    x = Dense(4096, activation='relu', name='fc1')(x)
+    x = Dropout(0.1)(x)
     x = Dense(2048, activation='relu', name='fc1')(x)
-    x = Dense(1024, activation='relu', name='fc2')(x)
+    x = Dropout(0.1)(x)
+    x = Dense(2048, activation='relu', name='fc2')(x)
     x = Dense(NUM_CLASSES, activation='softmax', name='predictions')(x)
 
     model = Model(input=img_input, output=x)

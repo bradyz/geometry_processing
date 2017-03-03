@@ -82,7 +82,7 @@ if __name__ == '__main__':
         print("Training accuracy %.3f" % train_score[-1])
         print("Validation accuracy %.3f" % valid_score[-1])
 
-        % Update plot live.
+        # Update plot live.
         if LIVE_PLOT:
             valid_plot.set_data(valid_ticks, valid_score)
             train_plot.set_data(train_ticks, train_score)
