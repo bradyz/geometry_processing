@@ -74,8 +74,8 @@ def resize_dataset(data, output_x, output_y):
     return result
 
 
-def get_data(data_path, batch=BATCH):
-    data_datagen = ImageDataGenerator()
+def get_data(data_path, batch=BATCH, preprocess=None):
+    data_datagen = ImageDataGenerator(preprocessing_function=preprocess)
     return data_datagen.flow_from_directory(data_path,
             target_size=(IMAGE_SIZE, IMAGE_SIZE),
             batch_size=batch,
@@ -124,32 +124,76 @@ def test_from_image(model, image):
     return prediction, class_name
 
 
-def get_mean_from_dir(dirname, batch_size=BATCH, num_batches=1000):
+
+def flow_from_directory_statistics(dirname, batch_size=BATCH, num_samples=1000):
     """
-    Iteratively calculate mean from a dataset too large to fit
-    in memory.
+    Iteratively calculate mean and std from a dataset too large to fit
+    in memory. Uses Welford's Method -
+    https://www.johndcook.com/blog/standard_deviation/
+    NOTE: there is a bug in the std calculation.
 
     Args:
         dirname (string) - directory with class labels and data.
         batch_size (int) - number of samples to process in a batch.
-        num_batches (int) - terminate early after seeing x batches.
+        num_samples (int) - terminate early after seeing x batches.
     Returns:
         (tuple), corresponding mean RGB values.
     """
     datagen = get_data(dirname, batch_size)
 
-    running_mean = np.zeros((3,), dtype=np.float64)
-    batches_seen = 0.0
+    mean = np.zeros((3,), dtype=np.float32)
+    running = np.zeros((3,), dtype=np.float32)
+    seen = 0
 
-    for x, y in datagen:
+    for x, _ in datagen:
         # Terminate if datagen is exhausted or sampled sufficiently.
-        if datagen.batch_index == 0 and batches_seen != 0:
+        if datagen.batch_index == 0 and seen != 0:
             break
-        elif batches_seen >= num_batches:
+        elif seen >= num_samples:
             break
 
-        # Accumulate statistics.
-        running_mean += np.mean(x, axis=(0, 1, 2))
-        batches_seen += x.shape[0] / batch_size
+        for i in range(x.shape[0]):
+            if seen >= num_samples:
+                break
+            seen += 1
+            sample = np.sum(x[i], axis=(0, 1)) / (IMAGE_SIZE ** 2)
 
-    return running_mean / batches_seen
+            delta = sample - mean
+            mean = mean + delta / seen
+            running = running + delta * (sample - mean)
+
+    return mean, running / (seen - 1)
+
+
+# TODO: add caching.
+def get_precomputed_statistics(directory, num_samples=1000):
+    # Get a clean datagen.
+    vanilla_datagen = get_data(directory)
+
+    # Collect a bunch of samples.
+    x = np.zeros((num_samples, IMAGE_SIZE, IMAGE_SIZE, 3))
+    offset = 0
+    for x_, _ in vanilla_datagen:
+        if offset >= num_samples:
+            break
+        for i in range(x_.shape[0]):
+            if offset >= num_samples:
+                break
+            x[offset] = x_[i]
+            offset += 1
+
+    # Actually fit the data and compute statistics.
+    statistics_datagen = ImageDataGenerator(
+            featurewise_std_normalization=True,
+            featurewise_center=True)
+    statistics_datagen.fit(x)
+
+    print("Dataset path: %s" % directory)
+    print("Sample mean: %s" % statistics_datagen.mean)
+    print("Sample standard deviation: %s" % statistics_datagen.std)
+
+    return statistics_datagen.mean, statistics_datagen.std
+
+
+def samplewise_normalize(mean, std):
+    return lambda x: (x - mean) / std

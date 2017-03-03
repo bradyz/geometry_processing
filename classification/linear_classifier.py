@@ -1,4 +1,5 @@
 import pickle
+import time
 
 import numpy as np
 
@@ -13,8 +14,8 @@ from geometry_processing.globals import TRAIN_DIR, VALID_DIR, NUM_CLASSES
 from geometry_processing.utils.helpers import get_data
 
 
-NUM_BATCHES = 1000
-BATCH_SIZE = 16
+NUM_BATCHES = 10
+BATCH_SIZE = 8
 LIVE_PLOT = True
 
 
@@ -34,9 +35,9 @@ if __name__ == '__main__':
     fc2 = extract_layer(model, 'fc2')
 
     # SGDClassifier with hinge loss and l2 is an SVM.
-    svm = linear_model.SGDClassifier(penalty='l2', alpha=0.01,
+    svm = linear_model.SGDClassifier(penalty='l2', alpha=0.001,
                                      loss='hinge', average=True,
-                                     n_jobs=-1, n_iter=5)
+                                     warm_start=True)
 
     # Used for logging training details.
     valid_score = list()
@@ -93,5 +94,7 @@ if __name__ == '__main__':
             plt.pause(0.05)
 
     # Save trained svm.
-    with open('svm.pkl', 'wb') as fid:
+    svm_pickle = "svm_%s.pkl" % time.strftime("%m_%d_%H_%M")
+    with open(svm_pickle, 'wb') as fid:
         pickle.dump(svm, fid)
+    print("Saved to %s." % svm_pickle)

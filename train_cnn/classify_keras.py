@@ -6,15 +6,23 @@ from keras.models import Model
 
 from geometry_processing.globals import (TRAIN_DIR, VALID_DIR, SAVE_FILE,
         LOG_FILE, IMAGE_SIZE, NUM_CLASSES)
-from geometry_processing.utils.helpers import get_data
+from geometry_processing.utils.helpers import (get_data,
+        get_precomputed_statistics, samplewise_normalize)
 
 
-USE_SAVE = True
+USE_SAVE = False
 
 
 def train(model):
-    train_generator = get_data(TRAIN_DIR)
-    valid_generator = get_data(VALID_DIR)
+    # Get dataset statistics.
+    train_mean, train_std = get_precomputed_statistics(TRAIN_DIR)
+
+    # Center and normalize each sample.
+    normalize = samplewise_normalize(train_mean, train_std)
+
+    # Get streaming data.
+    train_generator = get_data(TRAIN_DIR, preprocess=normalize)
+    valid_generator = get_data(VALID_DIR, preprocess=normalize)
 
     print("%d training samples." % train_generator.n)
     print("%d validation samples." % valid_generator.n)
