@@ -3,6 +3,7 @@ from keras.callbacks import CSVLogger, ModelCheckpoint, ReduceLROnPlateau
 from keras.layers import Dense, Flatten, Input, Dropout
 from keras.optimizers import SGD, RMSprop
 from keras.models import Model
+import keras.backend as K
 
 from geometry_processing.globals import (TRAIN_DIR, VALID_DIR, SAVE_FILE,
         LOG_FILE, IMAGE_SIZE, NUM_CLASSES)
@@ -24,8 +25,8 @@ def train(model):
     train_generator = get_data(TRAIN_DIR, preprocess=normalize)
     valid_generator = get_data(VALID_DIR, preprocess=normalize)
 
-    print("%d training samples." % train_generator.n)
-    print("%d validation samples." % valid_generator.n)
+    print('%d training samples.' % train_generator.n)
+    print('%d validation samples.' % valid_generator.n)
 
     # optimizer = RMSprop()
     # optimizer = SGD(lr=0.1, momentum=0.01)
@@ -59,9 +60,9 @@ def load_model_vgg():
 
     x = base_model.output
     x = Flatten(name='flatten')(x)
-    x = Dense(2048, activation='relu', name='fc1')(x)
+    x = Dense(4096, activation='relu', name='fc1')(x)
     x = Dropout(0.5)(x)
-    x = Dense(1024, activation='relu', name='fc2')(x)
+    x = Dense(2048, activation='relu', name='fc2')(x)
     x = Dropout(0.5)(x)
     x = Dense(NUM_CLASSES, activation='softmax', name='predictions')(x)
 
@@ -74,6 +75,6 @@ def load_model_vgg():
     return model
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     model = load_model_vgg()
     train(model)

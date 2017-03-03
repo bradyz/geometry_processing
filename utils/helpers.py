@@ -12,6 +12,7 @@ import numpy as np
 
 from keras.callbacks import Callback
 from keras.preprocessing.image import ImageDataGenerator
+import keras.backend as K
 
 from geometry_processing.globals import IMAGE_SIZE, BATCH
 
@@ -141,8 +142,8 @@ def flow_from_directory_statistics(dirname, batch_size=BATCH, num_samples=1000):
     """
     datagen = get_data(dirname, batch_size)
 
-    mean = np.zeros((3,), dtype=np.float32)
-    running = np.zeros((3,), dtype=np.float32)
+    mean = np.zeros((3,), dtype=K.floatx())
+    running = np.zeros((3,), dtype=K.floatx())
     seen = 0
 
     for x, _ in datagen:
@@ -166,7 +167,7 @@ def flow_from_directory_statistics(dirname, batch_size=BATCH, num_samples=1000):
 
 
 # TODO: add caching.
-def get_precomputed_statistics(directory, num_samples=1000):
+def get_precomputed_statistics(directory, num_samples=50):
     # Get a clean datagen.
     vanilla_datagen = get_data(directory)
 
