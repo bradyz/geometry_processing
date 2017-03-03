@@ -1,6 +1,7 @@
 from keras.applications.vgg16 import VGG16
 from keras.callbacks import CSVLogger, ModelCheckpoint, ReduceLROnPlateau
 from keras.layers import Dense, Flatten, Input, Dropout
+from keras.optimizers import SGD, RMSprop
 from keras.models import Model
 
 from geometry_processing.globals import (TRAIN_DIR, VALID_DIR, SAVE_FILE,
@@ -18,20 +19,22 @@ def train(model):
     print("%d training samples." % train_generator.n)
     print("%d validation samples." % valid_generator.n)
 
+    # optimizer = RMSprop()
+    # optimizer = SGD(lr=0.1, momentum=0.01)
     model.compile(loss='categorical_crossentropy',
                   optimizer='sgd',
                   metrics=['accuracy'])
 
     checkpointer = ModelCheckpoint(filepath=SAVE_FILE, verbose=1)
     csv_logger = CSVLogger(LOG_FILE)
-    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5,
-                                  patience=2, min_lr=0.001)
+    reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.1,
+                                  patience=2, min_lr=0.0001)
 
     model.fit_generator(generator=train_generator,
             samples_per_epoch=train_generator.n,
-            nb_epoch=10,
+            nb_epoch=5,
             validation_data=valid_generator,
-            nb_val_samples=valid_generator.n,
+            nb_val_samples=1000,
             callbacks=[checkpointer, csv_logger, reduce_lr])
 
     model.save_weights(SAVE_FILE)
@@ -48,11 +51,10 @@ def load_model_vgg():
 
     x = base_model.output
     x = Flatten(name='flatten')(x)
-    x = Dense(4096, activation='relu', name='fc1')(x)
-    x = Dropout(0.1)(x)
     x = Dense(2048, activation='relu', name='fc1')(x)
-    x = Dropout(0.1)(x)
-    x = Dense(2048, activation='relu', name='fc2')(x)
+    x = Dropout(0.5)(x)
+    x = Dense(1024, activation='relu', name='fc2')(x)
+    x = Dropout(0.5)(x)
     x = Dense(NUM_CLASSES, activation='softmax', name='predictions')(x)
 
     model = Model(input=img_input, output=x)
