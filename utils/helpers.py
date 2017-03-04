@@ -165,7 +165,6 @@ def flow_from_directory_statistics(dirname, batch_size=BATCH, num_samples=1000):
     return mean, running / (seen - 1)
 
 
-# TODO: add caching.
 def get_precomputed_statistics(directory, num_samples=50):
     # Get a clean datagen.
     vanilla_datagen = get_data(directory)

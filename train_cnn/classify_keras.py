@@ -6,20 +6,17 @@ from keras.models import Model
 import keras.backend as K
 
 from geometry_processing.globals import (TRAIN_DIR, VALID_DIR, SAVE_FILE,
-        LOG_FILE, IMAGE_SIZE, NUM_CLASSES)
+        LOG_FILE, IMAGE_SIZE, NUM_CLASSES, IMAGE_MEAN, IMAGE_STD)
 from geometry_processing.utils.helpers import (get_data,
         get_precomputed_statistics, samplewise_normalize)
 
 
-USE_SAVE = False
+USE_SAVE = True
 
 
 def train(model):
-    # Get dataset statistics.
-    train_mean, train_std = get_precomputed_statistics(TRAIN_DIR)
-
     # Center and normalize each sample.
-    normalize = samplewise_normalize(train_mean, train_std)
+    normalize = samplewise_normalize(IMAGE_MEAN, IMAGE_STD)
 
     # Get streaming data.
     train_generator = get_data(TRAIN_DIR, preprocess=normalize)
@@ -40,7 +37,7 @@ def train(model):
                                   patience=2, min_lr=0.0001)
 
     model.fit_generator(generator=train_generator,
-            samples_per_epoch=train_generator.n,
+            samples_per_epoch=64,
             nb_epoch=5,
             validation_data=valid_generator,
             nb_val_samples=1000,
@@ -68,9 +65,9 @@ def load_model_vgg():
 
     model = Model(input=img_input, output=x)
 
-    if USE_SAVE:
-        print('Loading weights from %s.' % SAVE_FILE)
-        model.load_weights(SAVE_FILE, by_name=True)
+    # if USE_SAVE:
+    #     print('Loading weights from %s.' % SAVE_FILE)
+    #     model.load_weights(SAVE_FILE, by_name=True)
 
     return model
 
