@@ -125,7 +125,6 @@ def test_from_image(model, image):
     return prediction, class_name
 
 
-
 def flow_from_directory_statistics(dirname, batch_size=BATCH, num_samples=1000):
     """
     Iteratively calculate mean and std from a dataset too large to fit
