@@ -1,8 +1,14 @@
+# Local mac machine paths.
+TRAIN_DIR = "/Users/bradyzhou/code/data/ModelNetViewpoints/train/"
+VALID_DIR = "/Users/bradyzhou/code/data/ModelNetViewpoints/test/"
+SAVE_FILE = "/Users/bradyzhou/code/data/model_weights.h5"
+LOG_FILE = "/Users/bradyzhou/code/geometry_processing/train_cnn/training.log"
+
 # Local unix machine paths.
-TRAIN_DIR = "/home/brady/code/data/ModelNetViewpoints/train/"
-VALID_DIR = "/home/brady/code/data/ModelNetViewpoints/test/"
-SAVE_FILE = "/home/brady/code/data/model_weights.h5"
-LOG_FILE = "/home/brady/code/geometry_processing/train_cnn/training.log"
+# TRAIN_DIR = "/home/brady/code/data/ModelNetViewpoints/train/"
+# VALID_DIR = "/home/brady/code/data/ModelNetViewpoints/test/"
+# SAVE_FILE = "/home/brady/code/data/model_weights.h5"
+# LOG_FILE = "/home/brady/code/geometry_processing/train_cnn/training.log"
 
 # TACC supercomputer information.
 # TRAIN_DIR = "/home/04365/bradyz/data/ModelNetViewpoints/train/"

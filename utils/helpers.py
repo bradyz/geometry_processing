@@ -75,12 +75,12 @@ def resize_dataset(data, output_x, output_y):
     return result
 
 
-def get_data(data_path, batch=BATCH, preprocess=None):
+def get_data(data_path, batch=BATCH, preprocess=None, shuffle=True):
     data_datagen = ImageDataGenerator(preprocessing_function=preprocess)
     return data_datagen.flow_from_directory(data_path,
             target_size=(IMAGE_SIZE, IMAGE_SIZE),
             batch_size=batch,
-            shuffle=True)
+            shuffle=shuffle)
 
 
 def plot_confusion_matrix(cm, classes,
