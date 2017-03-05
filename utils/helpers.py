@@ -10,6 +10,7 @@ from matplotlib import pyplot as plt
 
 import numpy as np
 
+from keras.models import Model
 from keras.callbacks import Callback
 from keras.preprocessing.image import ImageDataGenerator
 import keras.backend as K
@@ -196,3 +197,10 @@ def get_precomputed_statistics(directory, num_samples=50):
 
 def samplewise_normalize(mean, std):
     return lambda x: (x - mean) / std
+
+
+def extract_layer(full_model, layer):
+    intermediate_layer_model = Model(input=full_model.input,
+                                     output=full_model.get_layer(layer).output)
+    return intermediate_layer_model
+

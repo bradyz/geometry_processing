@@ -4,5 +4,6 @@ __pycache__
 .DS_Store
 **/build
 *.pkl
+*.h5
 
 train_cnn/model_weights.*

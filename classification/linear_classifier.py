@@ -7,26 +7,14 @@ from matplotlib import pyplot as plt
 
 from sklearn import linear_model
 
-from keras.models import Model
-
 from geometry_processing.train_cnn.classify_keras import load_model_vgg
-from geometry_processing.globals import TRAIN_DIR, VALID_DIR, NUM_CLASSES
-from geometry_processing.utils.helpers import get_data, samplewise_normalize
-
+from geometry_processing.globals import (TRAIN_DIR, VALID_DIR, NUM_CLASSES,
+        IMAGE_MEAN, IMAGE_STD)
+from geometry_processing.utils.helpers import (get_data, samplewise_normalize,
+        extract_layer)
 
 NUM_BATCHES = 10
 BATCH_SIZE = 8
-
-# Cached normalization.
-MEAN = np.array([[[246.16950989, 234.92953491, 234.92953491]]])
-STD = np.array([[[37.22032928, 68.81693268, 68.81693268]]])
-normalize = samplewise_normalize(MEAN, STD)
-
-
-def extract_layer(full_model, layer):
-    intermediate_layer_model = Model(input=full_model.input,
-                                     output=full_model.get_layer(layer).output)
-    return intermediate_layer_model
 
 
 def top_one_svm(train_datagen, valid_datagen, plot=True):
@@ -98,39 +86,15 @@ def evaluate_using_k(k=1):
     return
 
 
-def get_mean_std(layer, datagen, num_samples):
-    samples = np.zeros((num_samples, layer.output_shape[1]))
-
-    index = 0
-    for x, _ in datagen:
-        if index >= num_samples:
-            break
-        activations = layer.predict(x)
-
-        for i in range(activations.shape[0]):
-            if index >= num_samples:
-                break
-            samples[index] = activations[i]
-            index += 1
-
-    return np.mean(samples, axis=0), np.std(samples, axis=0)
-
-
 if __name__ == '__main__':
+    img_normalize = samplewise_normalize(IMAGE_MEAN, IMAGE_STD)
+
     # Initialize data generators.
-    train_datagen = get_data(TRAIN_DIR, BATCH_SIZE, preprocess=normalize)
-    valid_datagen = get_data(VALID_DIR, BATCH_SIZE, preprocess=normalize)
+    train_datagen = get_data(TRAIN_DIR, BATCH_SIZE, preprocess=img_normalize)
+    valid_datagen = get_data(VALID_DIR, BATCH_SIZE, preprocess=img_normalize)
 
     # Use the fc activations as features.
     model = load_model_vgg()
     fc2 = extract_layer(model, 'fc2')
-
-    # Precompute fc2 center and std to normalize.
-    mean, std = get_mean_std(fc2, train_datagen, 1000)
-    with open("fc2_mean.npy", "wb") as fd:
-        np.save(fd, mean)
-    with open("fc2_std.npy", "wb") as fd:
-        np.save(fd, std)
-    print(mean, std)
 
     # top_one_svm(train_datagen, valid_datagen)
