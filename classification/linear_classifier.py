@@ -9,7 +9,7 @@ from sklearn import linear_model
 
 from geometry_processing.train_cnn.classify_keras import load_model_vgg
 from geometry_processing.globals import (TRAIN_DIR, VALID_DIR, NUM_CLASSES,
-        IMAGE_MEAN, IMAGE_STD)
+        IMAGE_MEAN, IMAGE_STD, SAVE_FILE)
 from geometry_processing.utils.helpers import (get_data, samplewise_normalize,
         extract_layer)
 
@@ -94,7 +94,7 @@ if __name__ == '__main__':
     valid_datagen = get_data(VALID_DIR, BATCH_SIZE, preprocess=img_normalize)
 
     # Use the fc activations as features.
-    model = load_model_vgg()
+    model = load_model_vgg(SAVE_FILE)
     fc2 = extract_layer(model, 'fc2')
 
     # top_one_svm(train_datagen, valid_datagen)

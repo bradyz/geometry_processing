@@ -6,9 +6,8 @@ from geometry_processing.utils.helpers import (get_data, samplewise_normalize,
         extract_layer)
 
 
-hello.
 # Number of samples to use for std and mean calculations.
-NUM_SAMPLES = 10000
+NUM_SAMPLES = 100
 
 
 def get_mean_std(layer, datagen, num_samples):
@@ -21,11 +20,11 @@ def get_mean_std(layer, datagen, num_samples):
 
         activations = layer.predict(x)
 
-        for i in range(activations.shape[0]):
-            if index >= num_samples:
-                break
-            samples[index] = activations[i]
-            index += 1
+        offset = min(num_samples - index, activations.shape[0])
+        samples[index:index+offset] = activations[:offset]
+        index += offset
+
+    print(samples[-1])
 
     return np.mean(samples, axis=0), np.std(samples, axis=0)
 

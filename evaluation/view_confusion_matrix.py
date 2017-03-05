@@ -2,7 +2,7 @@ import numpy as np
 
 from sklearn.metrics import confusion_matrix
 
-from geometry_processing.globals import VALID_DIR, BATCH, NUM_CLASSES
+from geometry_processing.globals import VALID_DIR, NUM_CLASSES
 from geometry_processing.utils.helpers import plot_confusion_matrix, get_data
 from geometry_processing.train_cnn.classify_keras import load_model_vgg
 
@@ -42,7 +42,7 @@ def add_to_confusion_matrix(matrix, data_generator):
         # Aggregate confusion matrix.
         matrix += confusion_matrix(y_true, y_pred, labels=range(10))
 
-        total += BATCH
+        total += images.shape[0]
         print("%-4.2f%%: %d samples processed." % (100*total/NUM_SAMPLES, total))
 
     np.save(SAVE_FILE, matrix)

@@ -15,7 +15,7 @@ from keras.callbacks import Callback
 from keras.preprocessing.image import ImageDataGenerator
 import keras.backend as K
 
-from geometry_processing.globals import IMAGE_SIZE, BATCH
+from geometry_processing.globals import IMAGE_SIZE
 
 
 class ManualInspection(Callback):
@@ -76,7 +76,7 @@ def resize_dataset(data, output_x, output_y):
     return result
 
 
-def get_data(data_path, batch=BATCH, preprocess=None, shuffle=True):
+def get_data(data_path, batch=64, preprocess=None, shuffle=True):
     data_datagen = ImageDataGenerator(preprocessing_function=preprocess)
     return data_datagen.flow_from_directory(data_path,
             target_size=(IMAGE_SIZE, IMAGE_SIZE),
@@ -126,7 +126,7 @@ def test_from_image(model, image):
     return prediction, class_name
 
 
-def flow_from_directory_statistics(dirname, batch_size=BATCH, num_samples=1000):
+def flow_from_directory_statistics(dirname, batch_size=64, num_samples=1000):
     """
     Iteratively calculate mean and std from a dataset too large to fit
     in memory. Uses Welford's Method -
@@ -167,20 +167,23 @@ def flow_from_directory_statistics(dirname, batch_size=BATCH, num_samples=1000):
 
 
 def get_precomputed_statistics(directory, num_samples=50):
+    # Keras generators use float32 which gives weird values.
+    K.set_floatx('float64')
+
     # Get a clean datagen.
     vanilla_datagen = get_data(directory)
 
     # Collect a bunch of samples.
     x = np.zeros((num_samples, IMAGE_SIZE, IMAGE_SIZE, 3))
-    offset = 0
+
+    index = 0
     for x_, _ in vanilla_datagen:
-        if offset >= num_samples:
+        if index >= num_samples:
             break
-        for i in range(x_.shape[0]):
-            if offset >= num_samples:
-                break
-            x[offset] = x_[i]
-            offset += 1
+
+        offset = min(num_samples - index, x_.shape[0])
+        x[index:index+offset] = x_[:offset]
+        index += offset
 
     # Actually fit the data and compute statistics.
     statistics_datagen = ImageDataGenerator(
@@ -203,4 +206,3 @@ def extract_layer(full_model, layer):
     intermediate_layer_model = Model(input=full_model.input,
                                      output=full_model.get_layer(layer).output)
     return intermediate_layer_model
-
