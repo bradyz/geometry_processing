@@ -1,7 +1,7 @@
 from keras.applications.vgg16 import VGG16
 from keras.callbacks import CSVLogger, ModelCheckpoint, ReduceLROnPlateau
 from keras.layers import Dense, Flatten, Input, Dropout
-from keras.optimizers import SGD, RMSprop
+from keras.optimizers import SGD
 from keras.models import Model
 import keras.backend as K
 
@@ -11,6 +11,8 @@ from geometry_processing.utils.helpers import (get_data,
         get_precomputed_statistics, samplewise_normalize)
 
 
+# Set to 2 when training on supercomputer (one line per epoch).
+VERBOSITY = 2
 USE_SAVE = True
 
 
@@ -25,10 +27,9 @@ def train(model, save_to=''):
     print('%d training samples.' % train_generator.n)
     print('%d validation samples.' % valid_generator.n)
 
-    # optimizer = RMSprop()
-    # optimizer = SGD(lr=0.1, momentum=0.01)
+    optimizer = SGD(lr=0.01, momentum=0.01)
     model.compile(loss='categorical_crossentropy',
-                  optimizer='sgd',
+                  optimizer=optimizer,
                   metrics=['accuracy'])
 
     callbacks = list()
@@ -41,11 +42,12 @@ def train(model, save_to=''):
         callbacks.append(ModelCheckpoint(filepath=SAVE_FILE, verbose=1))
 
     model.fit_generator(generator=train_generator,
-            samples_per_epoch=64,
+            samples_per_epoch=train_generator.n,
             nb_epoch=5,
             validation_data=valid_generator,
             nb_val_samples=1000,
-            callbacks=callbacks)
+            callbacks=callbacks,
+            verbose=VERBOSITY)
 
     # Save the weights on completion.
     if save_to:
@@ -72,8 +74,11 @@ def load_model_vgg(weights_file=''):
     model = Model(input=img_input, output=x)
 
     if weights_file:
-        print('Loading weights from %s.' % weights_file)
-        model.load_weights(weights_file, by_name=True)
+        try:
+            print('Loading weights from %s.' % weights_file)
+            model.load_weights(weights_file, by_name=True)
+        except:
+            print('Loading failed. Starting from scratch.')
 
     return model
 

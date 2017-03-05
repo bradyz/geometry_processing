@@ -1,13 +1,14 @@
 import numpy as np
 
-from geometry_processing.globals import TRAIN_DIR, IMAGE_MEAN, IMAGE_STD
+from geometry_processing.globals import (TRAIN_DIR, IMAGE_MEAN,
+        IMAGE_STD, SAVE_FILE)
 from geometry_processing.train_cnn.classify_keras import load_model_vgg
 from geometry_processing.utils.helpers import (get_data, samplewise_normalize,
         extract_layer)
 
 
 # Number of samples to use for std and mean calculations.
-NUM_SAMPLES = 100
+NUM_SAMPLES = 45000
 
 
 def get_mean_std(layer, datagen, num_samples):
@@ -17,6 +18,7 @@ def get_mean_std(layer, datagen, num_samples):
     for x, _ in datagen:
         if index >= num_samples:
             break
+        print(index)
 
         activations = layer.predict(x)
 
@@ -31,7 +33,7 @@ def get_mean_std(layer, datagen, num_samples):
 
 if __name__ == '__main__':
     # Use the fc activations as features.
-    model = load_model_vgg()
+    model = load_model_vgg(SAVE_FILE)
     fc2 = extract_layer(model, 'fc2')
 
     # Normalize the image.
