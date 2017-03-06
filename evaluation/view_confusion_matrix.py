@@ -6,7 +6,7 @@ import numpy as np
 from sklearn.metrics import confusion_matrix
 
 from geometry_processing.globals import (VALID_DIR, NUM_CLASSES, SAVE_FILE,
-        IMAGE_MEAN, IMAGE_STD, FC2_MEAN, FC2_STD, PACKAGE_PATH)
+        IMAGE_MEAN, IMAGE_STD, FC2_MEAN, FC2_STD, PACKAGE_PATH, LOG_FILE)
 from geometry_processing.utils.helpers import (plot_confusion_matrix, get_data,
         samplewise_normalize, extract_layer)
 from geometry_processing.train_cnn.classify_keras import load_model_vgg
@@ -15,8 +15,8 @@ from geometry_processing.classification.linear_classifier import (get_top_k,
         min_entropy, fc2_normal)
 
 
+LOG_FD = open(LOG_FILE, "w")
 NUM_SAMPLES = 1000
-SVM_FILE = "svm_03_05_15_10.pkl"
 TRAIN = True
 USED_SAVED = True
 
@@ -69,19 +69,24 @@ def evaluate_cnn():
     plot_confusion_matrix(matrix, get_class_labels(data_generator))
 
 
-def evaluate_svm(svm, fc2_layer, softmax_layer, datagen, batch_size=5, top_k=3,
+def evaluate_svm(svm, fc2_layer, softmax_layer, datagen, batch_size=64, top_k=3,
         out_file_path=None):
     matrix = np.zeros((NUM_CLASSES, NUM_CLASSES))
 
     # Total samples evaluated.
     fc2_normalize = samplewise_normalize(FC2_MEAN, FC2_STD)
 
+    # Write to log.
+    LOG_FD.write("k: %d\n" % top_k)
+    LOG_FD.flush()
+
     total = 0
     # Images are mean centered and normalized.
     for batch in datagen.generate(batch_size=batch_size):
         if total >= NUM_SAMPLES:
             break
-        print("Samples Processed %d/%d" % (total, NUM_SAMPLES))
+        LOG_FD.write("Samples Processed %d/%d\n" % (total, NUM_SAMPLES))
+        LOG_FD.flush()
 
         # TODO: don't hardcode these.
         x = np.zeros((batch_size, 2048))
@@ -109,11 +114,13 @@ def evaluate_svm(svm, fc2_layer, softmax_layer, datagen, batch_size=5, top_k=3,
         total += batch[0].shape[0]
 
     if out_file_path:
-        print("Saving to %s." % out_file_path)
+        LOG_FD.write("Saving to %s.\n" % out_file_path)
+        LOG_FD.flush()
         np.save(out_file_path, matrix)
 
         accuracy = np.sum(np.diag(matrix)) / np.sum(matrix, axis=(0,1))
-        print("Accuracy %.4f" % accuracy)
+        LOG_FD.write("Accuracy %.4f\n" % accuracy)
+        LOG_FD.flush()
 
 
 if __name__ == '__main__':
@@ -126,7 +133,7 @@ if __name__ == '__main__':
     fc2_layer = extract_layer(model, 'fc2')
     softmax_layer = extract_layer(model, 'predictions')
 
-    for i in [1, 3, 5, 7, 10, 15, 20]:
+    for i in [3, 10, 15]:
         root = PACKAGE_PATH
         svm_path = os.path.join(root, "cache", "svm_top_k_%d.pkl" % i)
         out_path = os.path.join(root, "cache", "svm_top_k_%d_confusion.npy" % i)
@@ -135,4 +142,4 @@ if __name__ == '__main__':
             svm = pickle.load(fd)
 
         evaluate_svm(svm, fc2_layer, softmax_layer, test_group,
-                out_file_path=out_path)
+                top_k=i, out_file_path=out_path)
