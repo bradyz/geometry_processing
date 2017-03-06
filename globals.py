@@ -29,8 +29,8 @@ VALID_DIR = "/Users/bradyzhou/code/data/ModelNetViewpoints/test/"
 # VALID_DIR = "/home/brady/code/data/ModelNetViewpoints/test/"
 
 # TACC supercomputer information.
-# TRAIN_DIR = "/home/04365/bradyz/data/ModelNetViewpoints/train/"
-# VALID_DIR = "/home/04365/bradyz/data/ModelNetViewpoints/test/"
+TRAIN_DIR = "/home/04365/bradyz/data/ModelNetViewpoints/train/"
+VALID_DIR = "/home/04365/bradyz/data/ModelNetViewpoints/test/"
 ################################################################################
 
 SAVE_FILE = os.path.join(PACKAGE_PATH, "cache", "model_weights_V2.h5")

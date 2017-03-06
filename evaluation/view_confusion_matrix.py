@@ -15,7 +15,7 @@ from geometry_processing.classification.linear_classifier import (get_top_k,
         min_entropy, fc2_normal)
 
 
-LOG_FD = open(LOG_FILE, "w")
+LOG_FD = open(os.path.join(PACKAGE_PATH, "logs", "upper.log"), "w")
 NUM_SAMPLES = 1000
 TRAIN = True
 USED_SAVED = True
@@ -133,7 +133,7 @@ if __name__ == '__main__':
     fc2_layer = extract_layer(model, 'fc2')
     softmax_layer = extract_layer(model, 'predictions')
 
-    for i in [3, 10, 15]:
+    for i in [1, 3, 5, 7]:
         root = PACKAGE_PATH
         svm_path = os.path.join(root, "cache", "svm_top_k_%d.pkl" % i)
         out_path = os.path.join(root, "cache", "svm_top_k_%d_confusion.npy" % i)

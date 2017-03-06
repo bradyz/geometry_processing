@@ -1,0 +1,76 @@
+k: 10
+Samples Processed 0/1000
+Samples Processed 64/1000
+Samples Processed 128/1000
+Samples Processed 192/1000
+Samples Processed 256/1000
+Samples Processed 320/1000
+Samples Processed 384/1000
+Samples Processed 448/1000
+Samples Processed 512/1000
+Samples Processed 576/1000
+Samples Processed 640/1000
+Samples Processed 704/1000
+Samples Processed 768/1000
+Samples Processed 832/1000
+Samples Processed 896/1000
+Samples Processed 960/1000
+Saving to /home/04365/bradyz/code/geometry_processing/cache/svm_top_k_10_confusion.npy.
+Accuracy 0.9004
+k: 15
+Samples Processed 0/1000
+Samples Processed 64/1000
+Samples Processed 128/1000
+Samples Processed 192/1000
+Samples Processed 256/1000
+Samples Processed 320/1000
+Samples Processed 384/1000
+Samples Processed 448/1000
+Samples Processed 512/1000
+Samples Processed 576/1000
+Samples Processed 640/1000
+Samples Processed 704/1000
+Samples Processed 768/1000
+Samples Processed 832/1000
+Samples Processed 896/1000
+Samples Processed 960/1000
+Saving to /home/04365/bradyz/code/geometry_processing/cache/svm_top_k_15_confusion.npy.
+Accuracy 0.8760
+k: 20
+Samples Processed 0/1000
+Samples Processed 64/1000
+Samples Processed 128/1000
+Samples Processed 192/1000
+Samples Processed 256/1000
+Samples Processed 320/1000
+Samples Processed 384/1000
+Samples Processed 448/1000
+Samples Processed 512/1000
+Samples Processed 576/1000
+Samples Processed 640/1000
+Samples Processed 704/1000
+Samples Processed 768/1000
+Samples Processed 832/1000
+Samples Processed 896/1000
+Samples Processed 960/1000
+Saving to /home/04365/bradyz/code/geometry_processing/cache/svm_top_k_20_confusion.npy.
+Accuracy 0.8916
+k: 25
+Samples Processed 0/1000
+Samples Processed 64/1000
+Samples Processed 128/1000
+Samples Processed 192/1000
+Samples Processed 256/1000
+Samples Processed 320/1000
+Samples Processed 384/1000
+Samples Processed 448/1000
+Samples Processed 512/1000
+Samples Processed 576/1000
+Samples Processed 640/1000
+Samples Processed 704/1000
+Samples Processed 768/1000
+Samples Processed 832/1000
+Samples Processed 896/1000
+Samples Processed 960/1000
+Saving to /home/04365/bradyz/code/geometry_processing/cache/svm_top_k_25_confusion.npy.
+Accuracy 0.8154
