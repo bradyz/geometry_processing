@@ -123,7 +123,7 @@ def evaluate_svm(svm, fc2_layer, softmax_layer, datagen, batch_size=64, top_k=3,
         LOG_FD.flush()
 
 
-if __name__ == '__main__':
+def gather_svm():
     img_normalize = samplewise_normalize(IMAGE_MEAN, IMAGE_STD)
 
     test_group = GroupedDatagen(VALID_DIR, preprocess=img_normalize)
@@ -143,3 +143,13 @@ if __name__ == '__main__':
 
         evaluate_svm(svm, fc2_layer, softmax_layer, test_group,
                 top_k=i, out_file_path=out_path)
+
+
+if __name__ == '__main__':
+    data_generator = get_data(VALID_DIR)
+
+    for k in [1, 3, 5, 7, 10, 15, 20, 25]:
+        print("K: %d" % k)
+        matrix = np.load(os.path.join(PACKAGE_PATH, "cache", "svm_top_k_%d_confusion.npy" % k))
+        plot_confusion_matrix(matrix, get_class_labels(data_generator),
+                normalize=True, title="Confusion @ K=%d" % k)
