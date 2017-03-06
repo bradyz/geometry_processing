@@ -1,6 +1,7 @@
 import os
 import time
 import numpy as np
+
 import geometry_processing
 
 
@@ -13,8 +14,8 @@ NUM_CLASSES = 10
 IMAGE_MEAN = np.load(os.path.join(PACKAGE_PATH, "cache/image_mean.npy"))
 IMAGE_STD = np.load(os.path.join(PACKAGE_PATH, "cache/image_std.npy"))
 
-# FC2_MEAN = np.load(os.path.join(PACKAGE_PATH, "cache/fc2_mean.npy"))
-# FC2_STD = np.load(os.path.join(PACKAGE_PATH, "cache/fc2_std.npy"))
+FC2_MEAN = np.load(os.path.join(PACKAGE_PATH, "cache/fc2_mean.npy"))
+FC2_STD = np.load(os.path.join(PACKAGE_PATH, "cache/fc2_std.npy"))
 
 ################################################################################
 # Machine Specific Paths.
@@ -28,8 +29,8 @@ VALID_DIR = "/Users/bradyzhou/code/data/ModelNetViewpoints/test/"
 # VALID_DIR = "/home/brady/code/data/ModelNetViewpoints/test/"
 
 # TACC supercomputer information.
-TRAIN_DIR = "/home/04365/bradyz/data/ModelNetViewpoints/train/"
-VALID_DIR = "/home/04365/bradyz/data/ModelNetViewpoints/test/"
+# TRAIN_DIR = "/home/04365/bradyz/data/ModelNetViewpoints/train/"
+# VALID_DIR = "/home/04365/bradyz/data/ModelNetViewpoints/test/"
 ################################################################################
 
 SAVE_FILE = os.path.join(PACKAGE_PATH, "cache", "model_weights_V2.h5")

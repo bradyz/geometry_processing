@@ -199,7 +199,7 @@ def get_precomputed_statistics(directory, num_samples=50):
 
 
 def samplewise_normalize(mean, std):
-    return lambda x: (x - mean) / std
+    return lambda x: (x - mean) / (std + 1e-7)
 
 
 def extract_layer(full_model, layer):

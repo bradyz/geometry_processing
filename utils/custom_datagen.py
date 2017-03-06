@@ -14,14 +14,15 @@ def get_prefix(filename):
 
 
 class GroupedDatagen:
-    def __init__(self, data_dir, shape=(228, 228, 3),
+    def __init__(self, data_dir, shape=(224, 224, 3),
             preprocess=None, nb_class=10):
         self.data_dir = data_dir
-        self.nb_class=nb_class
+        self.nb_class = nb_class
         self.preprocess = preprocess
         self.shape = shape
         self.class_mapping = dict()
         self.data_pairs = list()
+        self.index = 0
 
         # Populate data pairs.
         self._setup()
@@ -56,25 +57,25 @@ class GroupedDatagen:
                 # Don't forget the last bin.
                 self._add_bin(label, root, current_bin)
 
-
-    def generate_pairs(self, shuffle=True):
-        # Counter that tells when to shuffle.
-        index = 0
-
-        # Infinite generator.
+    def _get_pairs(self, samples=25, shuffle=True):
         while True:
-            if index == 0 and shuffle:
+            if self.index == 0 and shuffle:
                 np.random.shuffle(self.data_pairs)
 
             # All n samples of this batch belong to a single mesh.
-            full_paths, label = self.data_pairs[index]
+            full_paths, label = self.data_pairs[self.index]
+
+            assert samples <= len(full_paths)
 
             # Initialize batch.
-            batch_x = np.zeros((len(full_paths),) + self.shape, dtype=K.floatx())
-            batch_y = np.zeros((len(full_paths), self.nb_class), dtype=K.floatx())
+            batch_x = np.zeros((samples,) + self.shape, dtype=K.floatx())
+            batch_y = np.zeros((samples, self.nb_class), dtype=K.floatx())
 
             # Get some samples.
             for i, full_path in enumerate(full_paths):
+                if i >= samples:
+                    break
+
                 img = image.load_img(full_path, target_size=self.shape)
                 x = image.img_to_array(img)
                 if self.preprocess:
@@ -85,9 +86,26 @@ class GroupedDatagen:
                 batch_y[i][self.class_mapping[label]] = 1.0
 
                 # Mark this pair as used.
-                index = (index + 1) % len(self.data_pairs)
+                self.index = (self.index + 1) % len(self.data_pairs)
 
             yield batch_x, batch_y
+
+    def generate(self, samples=25, batch_size=64, shuffle=True):
+        # Infinite generator.
+        while True:
+            x = np.zeros((batch_size, samples,) + self.shape, dtype=K.floatx())
+            y = np.zeros((batch_size, samples, self.nb_class), dtype=K.floatx())
+
+            for i, batch in enumerate(self._get_pairs(samples=samples,
+                                                      shuffle=shuffle)):
+                if i >= batch_size:
+                    break
+
+                batch_x, batch_y = batch
+                x[i] = batch_x
+                y[i] = batch_y
+
+            yield x, y
 
 
 if __name__ == "__main__":
@@ -95,5 +113,5 @@ if __name__ == "__main__":
     datagen = GroupedDatagen(VALID_DIR)
 
     # Loops indefinitely.
-    for samples, labels in datagen.generate_pairs():
+    for examples, labels in datagen.generate_pairs():
         pass
