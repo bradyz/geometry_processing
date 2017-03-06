@@ -1,17 +1,13 @@
 import pickle
-import time
 
 import numpy as np
-
-from matplotlib import pyplot as plt
 
 from sklearn import linear_model
 
 from geometry_processing.train_cnn.classify_keras import load_model_vgg
 from geometry_processing.globals import (TRAIN_DIR, VALID_DIR, NUM_CLASSES,
         IMAGE_MEAN, IMAGE_STD, SAVE_FILE, FC2_MEAN, FC2_STD)
-from geometry_processing.utils.helpers import (get_data, samplewise_normalize,
-        extract_layer)
+from geometry_processing.utils.helpers import samplewise_normalize, extract_layer
 from geometry_processing.utils.custom_datagen import GroupedDatagen
 
 
@@ -22,16 +18,33 @@ def entropy(x):
     return -np.sum(x * np.log(x))
 
 
-def fc2_normal_entropy(x, y, fc2_layer, fc2_normalize, softmax_layer):
+def get_top_k(features, entropy_index, k):
+    # Create a chunk using only the most confident views.
+    top_k_features = np.zeros((k, features.shape[1]))
+
+    # Grab the top k.
+    for i in range(k):
+        ith_index = entropy_index[i][1]
+        top_k_features[i] = features[ith_index]
+
+    return top_k_features
+
+
+# Returns (entropy, index) sorted pairs.
+def min_entropy(x, softmax_layer):
+    x_softmax = softmax_layer.predict(x)
+
+    # Sort by entropy.
+    x_entropy = [(entropy(x_softmax[i]), i) for i in range(x_softmax.shape[0])]
+    x_entropy.sort(key=lambda entropy_index: entropy_index[0])
+
+    return x_entropy
+
+
+def fc2_normal(x, fc2_layer, fc2_normalize):
     x_fc2 = fc2_layer.predict(x)
     x_fc2_normal = np.apply_along_axis(fc2_normalize, 1, x_fc2)
-
-    x_softmax = softmax_layer.predict(x)
-    x_entropy = [(entropy(x_softmax[i]), i) for i in range(x_softmax.shape[0])]
-
-    y = np.argmax(y, axis=1)
-
-    return x_fc2_normal, x_entropy, y
+    return x_fc2_normal
 
 
 def evaluate_using_k(fc2_layer, softmax_layer, train_group, valid_group,
@@ -65,32 +78,29 @@ def evaluate_using_k(fc2_layer, softmax_layer, train_group, valid_group,
         labels_valid = np.zeros((batch_size))
 
         for i in range(batch_size):
-            # Prep data for training.
-            x_fc, x_sm, y = fc2_normal_entropy(train[0][i],
-                    train[1][i], fc2_layer, fc2_normalize, softmax_layer)
+            # Train.
+            x_i = train[0][i]
+            y_i = train[1][i]
 
-            x_fc_valid, x_sm_valid, y_valid = fc2_normal_entropy(valid[0][i],
-                    valid[1][i], fc2_layer, fc2_normalize, softmax_layer)
+            x_fc = fc2_normal(x_i, fc2_layer, fc2_normalize)
+            x_entropy = min_entropy(x_i, softmax_layer)
+            x_top_fc = get_top_k(x_fc, x_entropy, top_k)
 
-            # Sort by entropy.
-            x_sm.sort(key=lambda entropy_index: entropy_index[0])
-            x_sm_valid.sort(key=lambda entropy_index: entropy_index[0])
+            # Validation.
+            x_i_valid = valid[0][i]
+            y_i_valid = valid[1][i]
 
-            # Create a chunk using only the most confident views.
-            top_k_fc = np.zeros((top_k, x_fc.shape[1]))
-            top_k_fc_valid = np.zeros((top_k, x_fc_valid.shape[1]))
-
-            # Grab the top k.
-            for j in range(top_k):
-                top_k_fc[j] = x_fc[x_sm[j][1]]
-                top_k_fc_valid[j] = x_fc_valid[x_sm_valid[j][1]]
+            x_fc_valid = fc2_normal(x_i_valid, fc2_layer, fc2_normalize)
+            x_entropy_valid = min_entropy(x_i_valid, softmax_layer)
+            x_top_fc_valid = get_top_k(x_fc_valid, x_entropy_valid, top_k)
 
             # Form the activation vector, which is element wise max of top k.
-            examples[i] = np.max(top_k_fc, axis=0)
-            labels[i] = y[0]
+            examples[i] = np.max(x_top_fc, axis=0)
+            examples_valid[i] = np.max(x_top_fc_valid, axis=0)
 
-            examples_valid[i] = np.max(top_k_fc_valid, axis=0)
-            labels_valid[i] = y_valid[0]
+            # All labels along axis 0 should be the same.
+            labels[i] = np.argmax(y_i, axis=1)[0]
+            labels_valid[i] = np.argmax(y_i_valid, axis=1)[0]
 
         # Train on batch.
         svm.partial_fit(examples, labels, classes=range(NUM_CLASSES))
@@ -101,12 +111,11 @@ def evaluate_using_k(fc2_layer, softmax_layer, train_group, valid_group,
                         svm.score(examples_valid, labels_valid)))
             log_file.flush()
 
-        if t > 0 and t % 25 == 0:
-            # Save trained svm.
-            svm_pickle = "svm_top_k_%d.pkl" % top_k
-            with open(svm_pickle, 'wb') as fid:
-                pickle.dump(svm, fid)
-            print("Saved to %s." % svm_pickle)
+    # Save trained svm.
+    svm_pickle = "svm_top_k_%d.pkl" % top_k
+    with open(svm_pickle, 'wb') as fid:
+        pickle.dump(svm, fid)
+    print("Saved to %s." % svm_pickle)
 
 
 if __name__ == '__main__':
