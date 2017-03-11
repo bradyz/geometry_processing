@@ -1,16 +1,29 @@
-import os
+import argparse
 
 import numpy as np
 
 from sklearn.metrics import confusion_matrix
 
 from geometry_processing.globals import (VALID_DIR, NUM_CLASSES,
-        IMAGE_MEAN, IMAGE_STD, MODEL_WEIGHTS, FC2_MEAN, FC2_STD, PACKAGE_PATH)
+        IMAGE_MEAN, IMAGE_STD, MODEL_WEIGHTS, FC2_MEAN, FC2_STD)
 
 from geometry_processing.classification.multiview_model import MultiviewModel
 from geometry_processing.utils.helpers import samplewise_normalize, extract_layer
 from geometry_processing.train_cnn.classify_keras import load_model
 from geometry_processing.utils.custom_datagen import GroupedDatagen
+
+
+# Command line arguments.
+parser = argparse.ArgumentParser(description='Generate a confusion matrix.')
+
+parser.add_argument('--svm_path', required=True, type=str,
+        help='Path to the pickled SVM.')
+parser.add_argument('--matrix_path', required=False, type=str, default="",
+        help='Path to save the matrix.')
+
+args = parser.parse_args()
+svm_path = args.svm_path
+matrix_path = args.matrix_path
 
 
 def evaluate(mv_model, valid_group, batch_size=32, nb_epoch=10, save_file=None):
@@ -43,10 +56,7 @@ if __name__ == '__main__':
     softmax_layer = extract_layer(model, 'predictions')
 
     # Training.
-    for i in [1, 3, 5, 7]:
-        svm_path = os.path.join(PACKAGE_PATH, "cache", "svm_top_k_%d.pkl" % i)
+    multiview = MultiviewModel(fc2_layer, softmax_layer, 3, NUM_CLASSES,
+            preprocess=fc2_normalize, svm_path=svm_path)
 
-        multiview = MultiviewModel(fc2_layer, softmax_layer, 3, NUM_CLASSES,
-                preprocess=fc2_normalize, svm_path=svm_path)
-
-        evaluate(multiview, valid_group)
+    evaluate(multiview, valid_group, save_file=matrix_path)
