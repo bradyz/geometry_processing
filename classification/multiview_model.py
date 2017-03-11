@@ -10,19 +10,24 @@ def entropy(x):
 
 
 class MultiviewModel:
-    def __init__(self, feature_layer, softmax_layer, k, svm_path=None):
+    def __init__(self, feature_layer, softmax_layer, k, nb_classes,
+            svm_path=None, preprocess=None):
         self.feature_layer = feature_layer
         self.softmax_layer = softmax_layer
         self.k = k
+        self.nb_classes = nb_classes
+
+        self.preprocess = preprocess
 
         if svm_path:
+            print('Loading SVM from %s.' % svm_path)
             with open(svm_path, "rb") as fd:
                 self.svm = pickle.load(fd)
         else:
             self.svm = linear_model.SGDClassifier(penalty='l2', alpha=0.0002,
                     loss='hinge')
 
-    def get_top_k(self, x):
+    def get_top_k_features(self, x):
         n = x.shape[0]
 
         features = self.feature_layer.predict(x)
@@ -41,19 +46,30 @@ class MultiviewModel:
 
         return top_k_features
 
-    def predict(self, batch, preprocess=None, postprocess=None):
+    def aggregated_features(self, batch):
         batch_size = batch.shape[0]
-
-        if preprocess is not None:
-            batch = np.apply_along_axis(preprocess, 1, batch)
 
         examples = np.zeros((batch_size, 2048))
 
         for i in range(batch_size):
-            x = batch[i]
-            examples[i] = self.get_top_k(x)
+            top_k_features = self.get_top_k_features(batch[i])
+            examples[i] = np.max(top_k_features, axis=0)
 
-        if postprocess is not None:
-            examples = np.apply_along_axis(postprocess, 1, examples)
+        if self.preprocess is not None:
+            examples = np.apply_along_axis(self.preprocess, 1, examples)
 
-        return self.svm.predict(examples)
+        return examples
+
+    def save(self, file_path):
+        print('Saving to %s.' % file_path)
+        with open(file_path, 'wb') as fd:
+            pickle.dump(self.svm, fd)
+        print('Success.')
+
+    def predict(self, batch):
+        return self.svm.predict(self.aggregated_features(batch))
+
+    def fit(self, x, y):
+        x_ = self.aggregated_features(x)
+
+        self.svm.partial_fit(x_, y, classes=range(self.nb_classes))

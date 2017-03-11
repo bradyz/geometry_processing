@@ -48,7 +48,7 @@ def fc2_normal(x, fc2_layer, fc2_normalize):
 
 
 def evaluate_using_k(fc2_layer, softmax_layer, train_group, valid_group,
-        top_k=3, batch_size=32, log_file=None):
+        top_k=3, batch_size=1, log_file=None):
     # Normalize the activation feature vectors.
     fc2_normalize = samplewise_normalize(FC2_MEAN, FC2_STD)
 
