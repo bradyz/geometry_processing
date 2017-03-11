@@ -1,3 +1,4 @@
+import time
 import argparse
 
 import numpy as np
@@ -19,25 +20,36 @@ parser = argparse.ArgumentParser(description='Generate a confusion matrix.')
 parser.add_argument('--svm_path', required=True, type=str,
         help='Path to the pickled SVM.')
 parser.add_argument('--matrix_path', required=False, type=str, default="",
-        help='Path to save the matrix.')
+        help='Path (without extension) to save the matrix.')
 
 args = parser.parse_args()
 svm_path = args.svm_path
 matrix_path = args.matrix_path
 
 
-def evaluate(mv_model, valid_group, batch_size=32, nb_epoch=10, save_file=None):
+def evaluate_loop(mv_model, valid_group, batch_size=32, nb_epoch=10,
+        save_file=None):
+    # Start time.
+    tic = time.time()
+
     matrix = np.zeros((NUM_CLASSES, NUM_CLASSES))
 
     for t, batch in enumerate(valid_group.generate(batch_size=batch_size)):
         if t >= nb_epoch:
             break
+        # Batch start time.
+        toc = time.time()
 
         x = batch[0]
         y_true = np.argmax(batch[1], axis=2)[:, 0]
         y_pred = mv_model.predict(x)
 
         matrix += confusion_matrix(y_true, y_pred, labels=range(NUM_CLASSES))
+
+        print("Batch took %.4f seconds." % (time.time() - toc))
+
+    print("Total time elapsed - %.4f seconds." % (time.time() - tic))
+    print("Accuracy %.4f" % np.mean(np.diag(matrix) / np.sum(matrix, axis=1)))
 
     # Save matrix to disk.
     if save_file:
@@ -59,4 +71,4 @@ if __name__ == '__main__':
     multiview = MultiviewModel(fc2_layer, softmax_layer, 3, NUM_CLASSES,
             preprocess=fc2_normalize, svm_path=svm_path)
 
-    evaluate(multiview, valid_group, save_file=matrix_path)
+    evaluate_loop(multiview, valid_group, save_file=matrix_path)

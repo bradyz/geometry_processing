@@ -28,18 +28,21 @@ class MultiviewModel:
                     loss='hinge')
 
     def get_top_k_features(self, x):
+        # Sanity checks.
         n = x.shape[0]
+        assert n >= k, 'Not enough views. n: %d < k: %d' % (n, self.k)
 
         features = self.feature_layer.predict(x)
         softmax = self.softmax_layer.predict(x)
 
+        # Sort by minimum entropy.
         entropy_index = [(entropy(softmax[i]), i) for i in range(n)]
         entropy_index.sort(key=lambda x: x[0])
 
-        # Create a chunk using only the most confident views.
+        # Create a chunk using only the K most confident views.
         top_k_features = np.zeros((self.k, features.shape[1]))
 
-        # Grab the top k.
+        # TODO: vectorize.
         for i in range(self.k):
             ith_index = entropy_index[i][1]
             top_k_features[i] = features[ith_index]
@@ -51,8 +54,11 @@ class MultiviewModel:
 
         examples = np.zeros((batch_size, 2048))
 
+        # TODO: vectorize.
         for i in range(batch_size):
             top_k_features = self.get_top_k_features(batch[i])
+
+            # The feature vector is a element-wise max over the top k.
             examples[i] = np.max(top_k_features, axis=0)
 
         if self.preprocess is not None:
@@ -61,14 +67,14 @@ class MultiviewModel:
         return examples
 
     def fit(self, x, y):
-        x_ = self.aggregated_features(x)
-        self.svm.partial_fit(x_, y, classes=range(self.nb_classes))
+        self.svm.partial_fit(self.aggregated_features(x), y,
+                classes=range(self.nb_classes))
 
-    def predict(self, batch):
-        return self.svm.predict(self.aggregated_features(batch))
+    def predict(self, x):
+        return self.svm.predict(self.aggregated_features(x))
 
     def score(self, x, y):
-        return self.score(self.aggregated_features(x), y)
+        return self.svm.score(self.aggregated_features(x), y)
 
     def save(self, file_path):
         print('Saving to %s.' % file_path)
