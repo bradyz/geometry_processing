@@ -60,16 +60,18 @@ class MultiviewModel:
 
         return examples
 
+    def fit(self, x, y):
+        x_ = self.aggregated_features(x)
+        self.svm.partial_fit(x_, y, classes=range(self.nb_classes))
+
+    def predict(self, batch):
+        return self.svm.predict(self.aggregated_features(batch))
+
+    def score(self, x, y):
+        return self.score(self.aggregated_features(x), y)
+
     def save(self, file_path):
         print('Saving to %s.' % file_path)
         with open(file_path, 'wb') as fd:
             pickle.dump(self.svm, fd)
         print('Success.')
-
-    def predict(self, batch):
-        return self.svm.predict(self.aggregated_features(batch))
-
-    def fit(self, x, y):
-        x_ = self.aggregated_features(x)
-
-        self.svm.partial_fit(x_, y, classes=range(self.nb_classes))

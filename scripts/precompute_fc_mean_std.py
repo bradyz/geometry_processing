@@ -2,7 +2,7 @@ import numpy as np
 
 from geometry_processing.globals import (TRAIN_DIR, IMAGE_MEAN,
         IMAGE_STD, SAVE_FILE)
-from geometry_processing.train_cnn.classify_keras import load_model_vgg
+from geometry_processing.train_cnn.classify_keras import load_model
 from geometry_processing.utils.helpers import (get_data, samplewise_normalize,
         extract_layer)
 
@@ -33,7 +33,7 @@ def get_mean_std(layer, datagen, num_samples):
 
 if __name__ == '__main__':
     # Use the fc activations as features.
-    model = load_model_vgg(SAVE_FILE)
+    model = load_model(SAVE_FILE)
     fc2 = extract_layer(model, 'fc2')
 
     # Normalize the image.

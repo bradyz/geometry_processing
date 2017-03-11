@@ -5,7 +5,7 @@ from keras.optimizers import SGD
 from keras.models import Model
 import keras.backend as K
 
-from geometry_processing.globals import (TRAIN_DIR, VALID_DIR, SAVE_FILE,
+from geometry_processing.globals import (TRAIN_DIR, VALID_DIR, MODEL_WEIGHTS,
         LOG_FILE, IMAGE_SIZE, NUM_CLASSES, IMAGE_MEAN, IMAGE_STD)
 from geometry_processing.utils.helpers import (get_data,
         get_precomputed_statistics, samplewise_normalize)
@@ -39,7 +39,7 @@ def train(model, save_to=''):
         patience=2, min_lr=0.0001))
 
     if save_to:
-        callbacks.append(ModelCheckpoint(filepath=SAVE_FILE, verbose=1))
+        callbacks.append(ModelCheckpoint(filepath=MODEL_WEIGHTS, verbose=1))
 
     model.fit_generator(generator=train_generator,
             samples_per_epoch=train_generator.n,
@@ -54,7 +54,7 @@ def train(model, save_to=''):
         model.save_weights(save_to)
 
 
-def load_model_vgg(weights_file=''):
+def load_model(weights_file=''):
     img_input = Input(tensor=Input(shape=(IMAGE_SIZE, IMAGE_SIZE, 3)))
 
     base_model = VGG16(include_top=False, input_tensor=img_input)
@@ -84,5 +84,5 @@ def load_model_vgg(weights_file=''):
 
 
 if __name__ == '__main__':
-    cnn = load_model_vgg(SAVE_FILE)
-    train(cnn, SAVE_FILE)
+    cnn = load_model(MODEL_WEIGHTS)
+    train(cnn, MODEL_WEIGHTS)

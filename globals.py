@@ -33,6 +33,6 @@ VALID_DIR = "/Users/bradyzhou/code/data/ModelNetViewpoints/test/"
 # VALID_DIR = "/home/04365/bradyz/data/ModelNetViewpoints/test/"
 ################################################################################
 
-SAVE_FILE = os.path.join(PACKAGE_PATH, "cache", "model_weights_V2.h5")
+MODEL_WEIGHTS = os.path.join(PACKAGE_PATH, "cache", "model_weights_V2.h5")
 LOG_FILE = os.path.join(PACKAGE_PATH, "logs",
                         "training_%s.log" % time.strftime("%m_%d_%H_%M"))

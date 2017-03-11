@@ -9,7 +9,7 @@ from geometry_processing.globals import (VALID_DIR, NUM_CLASSES, SAVE_FILE,
         IMAGE_MEAN, IMAGE_STD, FC2_MEAN, FC2_STD, PACKAGE_PATH, LOG_FILE)
 from geometry_processing.utils.helpers import (plot_confusion_matrix, get_data,
         samplewise_normalize, extract_layer)
-from geometry_processing.train_cnn.classify_keras import load_model_vgg
+from geometry_processing.train_cnn.classify_keras import load_model
 from geometry_processing.utils.custom_datagen import GroupedDatagen
 from geometry_processing.classification.linear_classifier import (get_top_k,
         min_entropy, fc2_normal)
@@ -17,8 +17,6 @@ from geometry_processing.classification.linear_classifier import (get_top_k,
 
 LOG_FD = open(os.path.join(PACKAGE_PATH, "logs", "upper.log"), "w")
 NUM_SAMPLES = 1000
-TRAIN = True
-USED_SAVED = True
 
 
 def get_class_labels(data_generator):
@@ -57,15 +55,9 @@ def add_to_confusion_matrix(model, matrix, data_generator, logits=False):
 def evaluate_cnn():
     # Set up crap.
     data_generator = get_data(VALID_DIR)
-    model = load_model_vgg(SAVE_FILE)
+    model = load_model(SAVE_FILE)
 
     matrix = np.zeros((NUM_CLASSES, NUM_CLASSES))
-    if USED_SAVED:
-        matrix = np.load("confusion_matrix.npy")
-
-    if TRAIN:
-        add_to_confusion_matrix(model, matrix, data_generator)
-
     plot_confusion_matrix(matrix, get_class_labels(data_generator))
 
 
@@ -129,7 +121,7 @@ def gather_svm():
     test_group = GroupedDatagen(VALID_DIR, preprocess=img_normalize)
 
     # Use the fc activations as features.
-    model = load_model_vgg(SAVE_FILE)
+    model = load_model(SAVE_FILE)
     fc2_layer = extract_layer(model, 'fc2')
     softmax_layer = extract_layer(model, 'predictions')
 
