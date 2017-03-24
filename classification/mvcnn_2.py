@@ -50,6 +50,46 @@ def feature_extraction(model, featurelayer, imagepath):
 
     return feature_output
 
+def fps_selection(model,
+                  img_dir, 
+                  objname,
+                  modelid,
+                  featurelayer,
+                  numselection,
+                  ):
+    files_pattern="*"+modelid+".off_*.png"
+    viewimgs = gfile.Glob(VALID_DIR+objname+"/"+files_pattern)
+    feats = filenames = np.array([])
+
+    for file in np.sort(viewimgs):
+        sys.stdout.write('.')
+        feat = feature_extraction(model, featurelayer, file)
+        filenames = np.append(filenames, file)
+        feats = np.append(feats, feat)
+    feats = np.reshape(feats,
+                       (filenames.shape[0], model.get_layer(featurelayer).output.shape[1]))
+    
+    solution_feats = solution_filenames = []
+    feats = feats.tolist()
+    filenames = filenames.tolist()
+    initindx = rd.randint(0, len(filenames)-1)
+    solution_feats = np.append(solution_feats, feats.pop(initindx))
+    solution_filenames = np.append(solution_filenames, filenames.pop(initindx))
+    
+    for _ in range(numselection-1):
+        distances = [feat_distance(f, solution_feats[0]) for f in feats]
+        for i, f in enumerate(feats):
+            for j, s in enumerate(solution_feats):
+                distances[i] = min(distances[i], feat_distance(f, s))
+        solution_feats = np.append(solution_feats, feats.pop(distances.index(max(distances))))
+        solution_filenames = np.append(solution_filenames, filenames.pop(distances.index(max(distances))))
+    solution_feats = np.asarray(solution_feats)
+    solution_feats = np.reshape(solution_feats,
+                               (len(solution_filenames), model.get_layer(featurelayer).output.shape[1]))
+    solution_filenames = np.asarray(solution_filenames)
+    sys.stdout.write('!\n')
+    return solution_feats, solution_filenames
+
 def feature_pooling(model,
                     img_dir,
                     bestviews,
