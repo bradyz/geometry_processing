@@ -162,14 +162,15 @@ if __name__ == '__main__':
 
     vggmodel = load_model_vgg()
 
+    objname = np.sort(os.listdir(VALID_DIR))[0]
+    print objname
+    
+    modellist = np.sort(os.listdir(VALID_DIR+ objname+"/"))
+    print modellist
+    
     layername = 'fc1'
-    objname = 'bed'
-    objID = '0517.off_'
+    objID = '0156'
     numselection = 7
-
-    testImg_path = VALID_DIR+'bed/'+'bed_0517.off_1_1.png'
-    output_probs, output_label = test_from_image(vggmodel, testImg_path)
-    print output_label
 
     bestviews, bestentr = view_selection(vggmodel,
                                        VALID_DIR,
