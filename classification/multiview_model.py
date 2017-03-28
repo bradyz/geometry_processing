@@ -1,5 +1,4 @@
 import random
-import time
 import pickle
 
 import keras.backend as K
@@ -83,11 +82,20 @@ class MultiviewModel:
 
     def fit(self, x, y):
         x_aggregated = self.aggregated_features(x)
-        self.svm.partial_fit(x_aggregated, y,
-                classes=range(self.nb_classes))
+        self.svm.partial_fit(x_aggregated, y, classes=range(self.nb_classes))
         return self.svm.score(x_aggregated, y)
 
     def predict(self, x):
+        """
+        Arguments:
+            x: (n, k, m) np.ndarray,
+                n the number of examples,
+                k the number of samples to pool,
+                m the feature size.
+        Returns:
+            (n, 1) np.ndarray,
+                n the number of examples, containing class predictions.
+        """
         return self.svm.predict(self.aggregated_features(x))
 
     def score(self, x, y):

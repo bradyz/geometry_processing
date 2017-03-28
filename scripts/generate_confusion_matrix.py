@@ -18,7 +18,7 @@ from geometry_processing.globals import (VALID_DIR, NUM_CLASSES,
         IMAGE_MEAN, IMAGE_STD, MODEL_WEIGHTS, FC2_MEAN, FC2_STD)
 
 from geometry_processing.classification.multiview_model import MultiviewModel
-from geometry_processing.utils.helpers import samplewise_normalize, extract_layer
+from geometry_processing.utils.helpers import samplewise_normalize
 from geometry_processing.train_cnn.classify_keras import load_model
 from geometry_processing.utils.custom_datagen import GroupedDatagen
 
@@ -84,7 +84,7 @@ if __name__ == '__main__':
     fc2_layer = model.get_layer('fc2').output
     softmax_layer = model.get_layer('predictions').output
 
-    # Training.
+    # Low budget version of pickle.load().
     multiview = MultiviewModel(model.layers[0].input, fc2_layer, softmax_layer,
             k_features, NUM_CLASSES, preprocess=fc2_normalize, svm_path=svm_path,
             sort_mode=sort_mode)
