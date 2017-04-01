@@ -65,7 +65,7 @@ class mvcnnclass:
             files = np.sort(gfile.Glob(self.data_path+objname+'/'+name+'*'))
             viewimgfilepaths.append(files)
             objIDs.append(name)
-        print 'Views are loaded!'
+        print '%s views are loaded!' % objname
         return viewimgfilepaths, objIDs
     
     def image_from_path(self, image_path):
@@ -81,8 +81,13 @@ class mvcnnclass:
     def singleview_classification(self, image_path):
         image = self.image_from_path(image_path)
         prediction = self.model.predict(image)
-        class_name = np.sort(os.listdir(VALID_DIR))[np.argmax(prediction, axis=1)]
-        return prediction, class_name
+        return prediction[0], np.argsort(prediction[0])[:-6:-1]
+    
+    def feature_extraction(self, imagepath, featurelayer):
+        image = self.image_from_path(imagepath)
+        intermediate_layer_model = Model(input=self.model.input,
+                                         output=self.model.get_layer(featurelayer).output)
+        return intermediate_layer_model.predict(image)
     
     def feat_distance(self, feat1, feat2):
         sim = spatial.distance.cosine(feat1, feat2)
@@ -91,11 +96,10 @@ class mvcnnclass:
     def output_entropy(self, prediction, eps=10e-4):
         return np.sum(-(prediction+eps)*np.log2(prediction+eps))
 
-    def feature_extraction(self, imagepath):
-        image = self.image_from_path(imagepath)
-        intermediate_layer_model = Model(input=self.model.input,
-                                         output=self.model.get_layer(self.featurelayer).output)
-        return intermediate_layer_model.predict(image)
+    def view_score(self, feat_test, feat_ref, prediction, portion=1.0):
+        entropy_score = self.output_entropy(prediction)
+        fps_score = self.feat_distance(feat_test, feat_ref)
+        return entropy_score+portion*fps_score
 
     def entropy_selection(self, viewimgfilepaths):
         filenames = []
@@ -109,7 +113,7 @@ class mvcnnclass:
         argminentropy = np.argsort(entropies)[:self.numviewselection]
         solution_filepath = filenames[argminentropy]
         for file in solution_filepath:
-            solution_feats.append(self.feature_extraction(file))
+            solution_feats.append(self.feature_extraction(file, self.featurelayer))
         solution_feats = np.asarray(solution_feats)
         solution_feats = np.reshape(solution_feats,
                                     (solution_filepath.shape[0],
@@ -121,7 +125,7 @@ class mvcnnclass:
         feats, filenames = [],[]
         for file in viewimgfilepaths:
             sys.stdout.write('.')
-            feat = self.feature_extraction(file)
+            feat = self.feature_extraction(file, self.featurelayer)
             filenames.append(file)
             feats.append(feat)
         solution_feats, solution_filepath = [],[]
@@ -172,8 +176,54 @@ class mvcnnclass:
             class_names.append(class_name)
         print "Classification Done."
         return prediction, class_name
+    
+    def singleview_analysis(self, savetopath):
+        objlist = np.sort(os.listdir(self.data_path))
+        print objlist
+        for _, objname in enumerate(objlist):
+            viewimgfilepaths, objID =mvcnn.get_data(objname)
+            for i, file in enumerate(viewimgfilepaths):
+                print "Model ID : %s" % objID[i]
+                fc1_feats, fc2_feats, fc1_fps, fc2_fps = [],[],[],[]
+                filename, entropies, classindxs = [],[],[]
+                recordlist = []
+                savefile = savetopath+objname+"/"+objID[i]+"_result.npy"
+                if os.path.isfile(savefile):
+                    print "%s_result.npy file already exists!" % objID[i]
+                else:
+                    for _, viewimg in enumerate(file):
+                        filename.append(viewimg.replace(self.data_path+objname+'/',''))
+                        prediction, classindx = self.singleview_classification(viewimg)
+                        entropies.append(self.output_entropy(prediction))
+                        classindxs.append(classindx)
+                        fc1_feats.append(self.feature_extraction(viewimg, 'fc1'))
+                        fc2_feats.append(self.feature_extraction(viewimg, 'fc2'))
+                    agg_fc1_feat = np.asarray(fc1_feats)
+                    agg_fc1_feat = np.reshape(agg_fc1_feat,(len(file), fc1_feats[0].size))
+                    agg_fc1_feat = self.feature_pooling(agg_fc1_feat)
+                    agg_fc2_feat = np.asarray(fc2_feats)
+                    agg_fc2_feat = np.reshape(agg_fc2_feat,(len(file), fc2_feats[0].size))
+                    agg_fc2_feat = self.feature_pooling(agg_fc2_feat)
+                    for j, fc1_feat in enumerate(fc1_feats):
+                        fc1_fps.append(self.feat_distance(fc1_feat, agg_fc1_feat))
+                        fc2_fps.append(self.feat_distance(fc2_feats[j], agg_fc2_feat))
 
-if __name__ == '__main__':
+                    record={"imgids": filename,
+                            "labels": classindxs,
+                            "entropy": entropies,
+                            "fc1_fps": fc1_fps,
+                            "fc1": fc1_feats,
+                            "fc1_global": agg_fc1_feat,
+                            "fc1_fps": fc2_fps,
+                            "fc2": fc2_feats,
+                            "fc2_global": agg_fc2_feat,
+                           }
+                    recordlist.append(record)
+                    np.save(savefile, recordlist)
+                    
+ if __name__ == '__main__':
     vggmodel = load_model_vgg()
     mvcnn = mvcnnclass(vggmodel, featurelayer='fc1')
     pred, classname = mvcnn.mvcnn_classification('bed')
+    mvcnn.singleview_analysis(ANALYSIS_DIR)
+                
