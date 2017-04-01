@@ -57,86 +57,20 @@ class mvcnnclass:
         self.data_path = data_path
     
     def get_data(self, objname):
-        viewimgs = []
+        viewimgfilepaths, objIDs = [],[]
         objlist = np.sort(os.listdir(self.data_path+objname+'/'))
         modelnum = objlist[::self.numallview]
         for i,name in enumerate(modelnum):
             name = name.replace('.off_1_1.png','')
             files = np.sort(gfile.Glob(self.data_path+objname+'/'+name+'*'))
-            viewimgs.append(files)
+            viewimgfilepaths.append(files)
+            objIDs.append(name)
         print 'Views are loaded!'
-        return viewimgs
+        return viewimgfilepaths, objIDs
     
-    def feat_distance(self, feat1, feat2):
-        return (np.sum((feat1-feat2)**2))**0.5
-    
-    def output_entropy(self, prediction, eps=10e-4):
-        return np.sum(-(prediction+eps)*np.log2(prediction+eps))
-
-    def feature_extraction(self, imagepath):
-        image = image_from_path(imagepath)
-        intermediate_layer_model = Model(input=self.model.input,
-                                         output=self.model.get_layer(self.featurelayer).output)
-        return intermediate_layer_model.predict(image)
-
-    def fps_selection(self, viewimgs):
-        feats, filenames = [],[]
-        for file in viewimgs:
-            sys.stdout.write('.')
-            feat = self.feature_extraction(file)
-            filenames = np.append(filenames, file)
-            feats = np.append(feats, feat)
-        feats = np.reshape(feats,
-                           (filenames.shape[0], self.model.get_layer(self.featurelayer).output.shape[1]))
-
-        solution_feats = solution_filepath = []
-        feats = feats.tolist()
-        filenames = filenames.tolist()
-        initindx = rd.randint(0, len(filenames)-1)
-        solution_feats = np.append(solution_feats, feats.pop(initindx))
-        solution_filepath = np.append(solution_filepath, filenames.pop(initindx))
-
-        for _ in range(self.numviewselection-1):
-            distances = [self.feat_distance(f, solution_feats[0]) for f in feats]
-            for i, f in enumerate(feats):
-                for j, s in enumerate(solution_feats):
-                    distances[i] = min(distances[i], self.feat_distance(f, s))
-            solution_feats = np.append(solution_feats, feats.pop(distances.index(max(distances))))
-            solution_filepath = np.append(solution_filepath, filenames.pop(distances.index(max(distances))))
-        solution_feats = np.asarray(solution_feats)
-        solution_feats = np.reshape(solution_feats,
-                                   (len(solution_filepath), self.model.get_layer(self.featurelayer).output.shape[1]))
-        solution_filepath = np.asarray(solution_filepath)
-        sys.stdout.write('!\n')
-        print "FPS selection done."
-        return solution_feats, solution_filepath
-    
-    def feature_pooling(self, selected_feats):
-        return np.amax(selected_feats, axis=0)
-
-    def mvcnn_classification(self, viewimgs):
-        bestfeats, bestfilepath = self.fps_selection(viewimgs)
-        agg_feat = self.feature_pooling(bestfeats)
-
-        feat_input = Input(tensor=Input(shape=(agg_feat.shape)))
-        if self.featurelayer=='fc1':
-            x = self.model.get_layer('fc2')(feat_input)
-            x = self.model.get_layer('predictions')(x)
-        else:
-            x = self.model.get_layer('predictions')(feat_input)
-        cnn2_model = Model(input=feat_input, output=x)
-
-        prediction = cnn2_model.predict(np.array([agg_feat]))
-        class_name = np.sort(os.listdir(VALID_DIR))[np.argmax(prediction, axis=1)]
-        sys.stdout.write('!\n')
-        print "Classification Done."
-        return prediction, class_name
-
     def image_from_path(self, image_path):
         image = cv2.imread(image_path, cv2.IMREAD_COLOR)
         try:
-            # plt.imshow(image)
-            # Image must be of size (1, 224, 224, 3).
             image = np.reshape(image, (1, IMAGE_SIZE, IMAGE_SIZE, 3)) 
         except:    
             print('IMAGE LOADING FAILDED!!!')
@@ -149,10 +83,97 @@ class mvcnnclass:
         prediction = self.model.predict(image)
         class_name = np.sort(os.listdir(VALID_DIR))[np.argmax(prediction, axis=1)]
         return prediction, class_name
+    
+    def feat_distance(self, feat1, feat2):
+        sim = spatial.distance.cosine(feat1, feat2)
+        return 1-sim 
+    
+    def output_entropy(self, prediction, eps=10e-4):
+        return np.sum(-(prediction+eps)*np.log2(prediction+eps))
+
+    def feature_extraction(self, imagepath):
+        image = self.image_from_path(imagepath)
+        intermediate_layer_model = Model(input=self.model.input,
+                                         output=self.model.get_layer(self.featurelayer).output)
+        return intermediate_layer_model.predict(image)
+
+    def entropy_selection(self, viewimgfilepaths):
+        filenames = []
+        entropies = []
+        for file in viewimgfilepaths:
+            sys.stdout.write('.')
+            prediction, _ = self.singleview_classification(file)
+            entropies = np.append(entropies, self.output_entropy(prediction))
+            filenames = np.append(filenames, file)
+        solution_feats, solution_filepath = [],[]
+        argminentropy = np.argsort(entropies)[:self.numviewselection]
+        solution_filepath = filenames[argminentropy]
+        for file in solution_filepath:
+            solution_feats.append(self.feature_extraction(file))
+        solution_feats = np.asarray(solution_feats)
+        solution_feats = np.reshape(solution_feats,
+                                    (solution_filepath.shape[0],
+                                     self.model.get_layer(self.featurelayer).output.shape[1]))
+        solution_filepath = np.asarray(solution_filepath)
+        return solution_feats, solution_filepath
+    
+    def fps_selection(self, viewimgfilepaths):
+        feats, filenames = [],[]
+        for file in viewimgfilepaths:
+            sys.stdout.write('.')
+            feat = self.feature_extraction(file)
+            filenames.append(file)
+            feats.append(feat)
+        solution_feats, solution_filepath = [],[]
+        initindx = rd.randint(0, len(filenames)-1)
         
+        solution_feats.append(feats.pop(initindx))
+        solution_filepath.append(filenames.pop(initindx))
+        
+        for i in range(self.numviewselection-1):
+            distances = [self.feat_distance(f, solution_feats[0]) for f in feats]
+            for i, f in enumerate(feats):
+                for j, s in enumerate(solution_feats):
+                    distances[i] = min(distances[i], self.feat_distance(f, s))
+            solution_feats.append(feats.pop(distances.index(max(distances))))
+            solution_filepath.append(filenames.pop(distances.index(max(distances))))
+        solution_feats = np.asarray(solution_feats)
+        solution_feats = np.reshape(solution_feats,
+                                    (len(solution_filepath), 
+                                     self.model.get_layer(self.featurelayer).output.shape[1]))
+        solution_filepath = np.asarray(solution_filepath)
+        sys.stdout.write('!\n')
+        print "FPS selection done."
+        return solution_feats, solution_filepath
+    
+    def feature_pooling(self, selected_feats):
+        return np.amax(selected_feats, axis=0)
+
+    def mvcnn_classification(self, objname):
+        predictions, class_names = [],[]
+        viewimgfilepaths, objID =mvcnn.get_data(objname)
+        for i, objIDpaths in enumerate(viewimgfilepaths):
+            print "Object ID-> %s" % objID[i]
+            bestfeats, bestfilepath = self.entropy_selection(objIDpaths)
+            agg_feat = self.feature_pooling(bestfeats)
+
+            feat_input = Input(tensor=Input(shape=(agg_feat.shape)))
+            if self.featurelayer=='fc1':
+                x = self.model.get_layer('fc2')(feat_input)
+                x = self.model.get_layer('predictions')(x)
+            else:
+                x = self.model.get_layer('predictions')(feat_input)
+            cnn2_model = Model(input=feat_input, output=x)
+
+            prediction = cnn2_model.predict(np.array([agg_feat]))
+            class_name = np.sort(os.listdir(VALID_DIR))[np.argmax(prediction, axis=1)]
+            sys.stdout.write('!\n')
+            predictions.append(prediction)
+            class_names.append(class_name)
+        print "Classification Done."
+        return prediction, class_name
+
 if __name__ == '__main__':
     vggmodel = load_model_vgg()
     mvcnn = mvcnnclass(vggmodel, featurelayer='fc1')
-    imgs =mvcnn.get_data('bed')
-    pred, classname = mvcnn.mvcnn_classification(imags[0])
-   
+    pred, classname = mvcnn.mvcnn_classification('bed')
