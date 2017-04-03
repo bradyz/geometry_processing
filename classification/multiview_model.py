@@ -6,15 +6,13 @@ import numpy as np
 
 from sklearn import linear_model
 
+from geometry_processing.utils.helpers import entropy
+
 
 # Hack for enums.
 GREEDY = 0
 RANDOM = 1
 MODES = [GREEDY, RANDOM]
-
-
-def entropy(x):
-    return -np.sum(x * np.log(x))
 
 
 class MultiviewModel:

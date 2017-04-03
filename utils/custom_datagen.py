@@ -57,7 +57,7 @@ class GroupedDatagen:
                 # Don't forget the last bin.
                 self._add_bin(label, root, current_bin)
 
-    def _get_pairs(self, samples=25, shuffle=True):
+    def _get_pairs(self, samples, shuffle):
         while True:
             if self.index == 0 and shuffle:
                 np.random.shuffle(self.data_pairs)
@@ -108,10 +108,63 @@ class GroupedDatagen:
             yield x, y
 
 
+class FilenameImageDatagen:
+    def __init__(self, data_dir, shape=(224, 224, 3), preprocess=None):
+        self.data_dir = data_dir
+        self.preprocess = preprocess
+        self.shape = shape
+
+    def generate_single(self):
+        # The files in this directory should be names of classes.
+        for _, label in enumerate(sorted(os.listdir(self.data_dir))):
+            # All the images associated with the class.
+            for root, _, files in os.walk(os.path.join(self.data_dir, label)):
+                for filename in sorted(files):
+                    full_path = os.path.join(root, filename)
+
+                    img = image.load_img(full_path, target_size=self.shape)
+                    img = image.img_to_array(img)
+
+                    if self.preprocess:
+                        img = self.preprocess(img)
+
+                    yield full_path, img
+
+    def generate(self, batch_size=16):
+        """Generates batchs of size batch_size except for the last batch."""
+        paths = np.zeros((batch_size), dtype='object')
+        images = np.zeros((batch_size,) + self.shape, dtype=K.floatx())
+
+        next_spot = 0
+
+        for _, path_image in enumerate(self.generate_single()):
+            paths[next_spot] = path_image[0]
+            images[next_spot] = path_image[1]
+            next_spot += 1
+
+            # Filled up entire batch, yield it.
+            if next_spot == batch_size:
+                yield paths, images
+
+                # Overwrite the previous data.
+                next_spot = 0
+
+        # Last batch not filled, yield what remains.
+        if next_spot != 0:
+            yield paths[:index], images[:index]
+
+
 if __name__ == "__main__":
     # Sample usage.
-    datagen = GroupedDatagen(VALID_DIR)
+    grouped_datagen = GroupedDatagen(VALID_DIR)
 
     # Loops indefinitely.
-    for examples, labels in datagen.generate_pairs():
+    for examples, labels in grouped_datagen.generate():
+        pass
+
+    # Sample usage.
+    filename_datagen = FilenameImageDatagen(VALID_DIR)
+
+    # Loops until directory is exhausted.
+    for filename, image in filename_datagen.generate():
         pass

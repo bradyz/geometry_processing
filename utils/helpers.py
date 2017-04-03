@@ -206,3 +206,7 @@ def extract_layer(full_model, layer):
     intermediate_layer_model = Model(input=full_model.input,
                                      output=full_model.get_layer(layer).output)
     return intermediate_layer_model
+
+
+def entropy(x):
+    return -np.sum(x * np.log(x + 1e-7))
