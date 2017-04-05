@@ -1,3 +1,5 @@
+import argparse
+
 import keras.backend as K
 
 from geometry_processing.globals import (TRAIN_DIR, VALID_DIR,
@@ -8,32 +10,39 @@ from geometry_processing.train_cnn.classify_keras import load_model
 from geometry_processing.utils.custom_datagen import FilenameImageDatagen
 
 
-def mean(subarray):
-    return sum(subarray) / len(subarray)
+parser = argparse.ArgumentParser(description='Generate saliency data.')
+
+parser.add_argument('--confidence_threshold', required=False, type=float,
+        default=0.7, help='Value from [0, inf]. Lower is more confident.')
+parser.add_argument('--generate_training', required=True, type=int,
+        help='[1] for training, [2] for validation.')
+
+args = parser.parse_args()
+confidence_threshold = args.confidence_threshold
+generate_training = args.generate_training
 
 
-def find_best_split(values):
-    n = len(values)
+def generate(datagen, functor):
+    # Generate training data.
+    for full_paths, images in datagen.generate(25):
+        predictions = functor([images, 0.0])[0]
 
-    max_diff = float('-inf')
-    max_i = 1
-
-    for i in range(1, n):
-        left = mean(values[:i])
-        right = mean(values[i:])
-
-        if max_diff < abs(right - left):
-            max_diff = abs(right - left)
-            max_i = i
-
-    return max_i
+        for i in range(predictions.shape[0]):
+            if entropy(predictions[i]) <= confidence_threshold:
+                print(full_paths[i], 1.0)
+            else:
+                print(full_paths[i], 0.0)
 
 
 if __name__ == '__main__':
     # Data source and image normalization.
     img_normalize = samplewise_normalize(IMAGE_MEAN, IMAGE_STD)
-    train_group = FilenameImageDatagen(TRAIN_DIR, preprocess=img_normalize)
-    valid_group = FilenameImageDatagen(VALID_DIR, preprocess=img_normalize)
+
+    # Directory of images.
+    if generate_training == 1:
+        datagen = FilenameImageDatagen(TRAIN_DIR, preprocess=img_normalize)
+    elif generate_training == 2:
+        datagen = FilenameImageDatagen(VALID_DIR, preprocess=img_normalize)
 
     # # Use the fc activations as features.
     model = load_model(MODEL_WEIGHTS)
@@ -43,23 +52,4 @@ if __name__ == '__main__':
     functor = K.function([model.layers[0].input, K.learning_phase()],
                          [softmax_layer])
 
-    # Generate training data.
-    for full_paths, images in train_group.generate():
-        predictions = functor([images, 0.0])[0]
-
-        n = predictions.shape[0]
-
-        # Create a bunch of path, entropy score pairs.
-        path_entropy = [(full_paths[i], entropy(predictions[i])) for i in range(n)]
-        path_entropy.sort(key=lambda x: x[1])
-
-        # Best index to partition the images.
-        index_split = find_best_split([x[1] for x in path_entropy])
-
-        # The more salient images.
-        for i in range(index_split):
-            print(path_entropy[i][0], 1.0)
-
-        # The less salient images.
-        for i in range(index_split, n):
-            print(path_entropy[i][0], 0.0)
+    generate(datagen, functor)
