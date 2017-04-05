@@ -8,6 +8,27 @@ from geometry_processing.train_cnn.classify_keras import load_model
 from geometry_processing.utils.custom_datagen import FilenameImageDatagen
 
 
+def mean(subarray):
+    return sum(subarray) / len(subarray)
+
+
+def find_best_split(values):
+    n = len(values)
+
+    max_diff = float('-inf')
+    max_i = 1
+
+    for i in range(1, n):
+        left = mean(values[:i])
+        right = mean(values[i:])
+
+        if max_diff < abs(right - left):
+            max_diff = abs(right - left)
+            max_i = i
+
+    return max_i
+
+
 if __name__ == '__main__':
     # Data source and image normalization.
     img_normalize = samplewise_normalize(IMAGE_MEAN, IMAGE_STD)
@@ -16,15 +37,29 @@ if __name__ == '__main__':
 
     # # Use the fc activations as features.
     model = load_model(MODEL_WEIGHTS)
-    fc2_layer = model.get_layer('fc2').output
     softmax_layer = model.get_layer('predictions').output
 
+    # Wrapper around Tensorflow run operation.
     functor = K.function([model.layers[0].input, K.learning_phase()],
                          [softmax_layer])
 
+    # Generate training data.
     for full_paths, images in train_group.generate():
-        probabilities = functor([images, 0.0])[0]
+        predictions = functor([images, 0.0])[0]
 
-        for i in range(probabilities.shape[0]):
-            print(probabilities[i])
-            print(entropy(probabilities[i]))
+        n = predictions.shape[0]
+
+        # Create a bunch of path, entropy score pairs.
+        path_entropy = [(full_paths[i], entropy(predictions[i])) for i in range(n)]
+        path_entropy.sort(key=lambda x: x[1])
+
+        # Best index to partition the images.
+        index_split = find_best_split([x[1] for x in path_entropy])
+
+        # The more salient images.
+        for i in range(index_split):
+            print(path_entropy[i][0], 1.0)
+
+        # The less salient images.
+        for i in range(index_split, n):
+            print(path_entropy[i][0], 0.0)
