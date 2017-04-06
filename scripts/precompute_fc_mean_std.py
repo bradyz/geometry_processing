@@ -2,9 +2,9 @@ import numpy as np
 
 from geometry_processing.globals import (TRAIN_DIR, IMAGE_MEAN,
         IMAGE_STD, SAVE_FILE)
-from geometry_processing.train_cnn.classify_keras import load_model
 from geometry_processing.utils.helpers import (get_data, samplewise_normalize,
         extract_layer)
+from geometry_processing.models.multiview_cnn import load_model
 
 
 # Number of samples to use for std and mean calculations.

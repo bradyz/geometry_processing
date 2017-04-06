@@ -4,10 +4,9 @@ import keras.backend as K
 
 from geometry_processing.globals import (TRAIN_DIR, VALID_DIR,
         IMAGE_MEAN, IMAGE_STD, MODEL_WEIGHTS)
-
 from geometry_processing.utils.helpers import samplewise_normalize, entropy
-from geometry_processing.train_cnn.classify_keras import load_model
 from geometry_processing.utils.custom_datagen import FilenameImageDatagen
+from geometry_processing.models.multiview_cnn import load_model
 
 
 parser = argparse.ArgumentParser(description='Generate saliency data.')

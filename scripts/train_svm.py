@@ -25,11 +25,10 @@ import numpy as np
 
 from geometry_processing.globals import (TRAIN_DIR, VALID_DIR, NUM_CLASSES,
         IMAGE_MEAN, IMAGE_STD, MODEL_WEIGHTS, FC2_MEAN, FC2_STD)
-
-from geometry_processing.classification.multiview_model import MultiviewModel
 from geometry_processing.utils.helpers import samplewise_normalize
-from geometry_processing.train_cnn.classify_keras import load_model
 from geometry_processing.utils.custom_datagen import GroupedDatagen
+from geometry_processing.models.multiview_cnn import load_model
+from geometry_processing.models.multiview_svm import MultiviewModel
 
 
 # Command line arguments.
