@@ -34,5 +34,10 @@ VALID_DIR = "/Users/bradyzhou/code/data/ModelNetViewpoints/test/"
 ################################################################################
 
 MODEL_WEIGHTS = os.path.join(PACKAGE_PATH, "cache", "model_weights_V2.h5")
+SALIENCY_MODEL = os.path.join(PACKAGE_PATH, "cache", "saliency_model.h5")
+
 LOG_FILE = os.path.join(PACKAGE_PATH, "logs",
                         "training_%s.log" % time.strftime("%m_%d_%H_%M"))
+
+SALIENCY_DATA_TRAIN = os.path.join(PACKAGE_PATH, "data", "saliency_labels_train.txt")
+SALIENCY_DATA_VALID = os.path.join(PACKAGE_PATH, "data", "saliency_labels_valid.txt")

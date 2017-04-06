@@ -151,7 +151,65 @@ class FilenameImageDatagen:
 
         # Last batch not filled, yield what remains.
         if next_spot != 0:
-            yield paths[:index], images[:index]
+            yield paths[:next_spot], images[:next_spot]
+
+
+class SaliencyDataGenerator:
+    def __init__(self, image_dir, labels_path, batch_size=32,
+            shape=(224, 224, 3), preprocess=None, shuffle=True):
+        self.image_dir = image_dir
+        self.labels_path = labels_path
+        self.batch_size = batch_size
+        self.shape = shape
+        self.preprocess = preprocess
+        self.shuffle = shuffle
+
+        # Holds tuples of (path, label).
+        self.data = list()
+
+        with open(self.labels_path, 'r') as data:
+            for line in data:
+                path, label = line.split(' ')
+
+                path = os.path.join(self.image_dir, path)
+                label = int(float(label))
+
+                # Add the training pair.
+                self.data.append((path, label))
+
+        self.nb_data = len(self.data)
+
+
+    def generate(self):
+        x = np.zeros((self.batch_size,) + self.shape, dtype=K.floatx())
+        y = np.zeros((self.batch_size, 2), dtype=K.floatx())
+
+        next_spot = 0
+
+        while True:
+            for i in range(self.batch_size):
+                if next_spot == 0 and self.shuffle:
+                    np.random.shuffle(self.data)
+
+                image_path, label = self.data[next_spot]
+
+                img = image.load_img(image_path, target_size=self.shape)
+                img = image.img_to_array(img)
+
+                if self.preprocess:
+                    img = self.preprocess(img)
+
+                x[i] = img
+
+                # One hot encoding.
+                y[i][0] = 0.0
+                y[i][1] = 0.0
+                y[i][label] = 1.0
+
+                next_spot = (next_spot + 1) % self.nb_data
+
+            yield x, y
+
 
 
 if __name__ == "__main__":
