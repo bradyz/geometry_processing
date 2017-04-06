@@ -20,13 +20,10 @@ parser.add_argument('--verbose', required=False, type=int,
         default=1, help='[1] for curses, [2] for infrequent.')
 parser.add_argument('--log_file', required=False, type=str,
         default='', help='File to log training, validation loss and accuracy.')
-parser.add_argument('--save_path', required=False, type=str,
-        default='', help='File to save trained model.')
 
 args = parser.parse_args()
 verbose = args.verbose
 log_file = args.log_file
-save_path = args.save_path
 
 
 def load_weights(model, weights_file):
@@ -80,7 +77,7 @@ def build_model(mvcnn_weights='', weights_file=''):
     return saliency_model
 
 
-def train(model):
+def train(model, save_path):
     model.compile(loss='binary_crossentropy',
                   optimizer=SGD(lr=1e-3, momentum=0.9),
                   metrics=['accuracy'])
@@ -100,7 +97,7 @@ def train(model):
     # Train.
     model.fit_generator(generator=train_generator.generate(),
             samples_per_epoch=train_generator.nb_data,
-            nb_epoch=5,
+            nb_epoch=10,
             validation_data=valid_generator.generate(),
             nb_val_samples=1000,
             callbacks=callbacks,
@@ -122,4 +119,4 @@ if __name__ == '__main__':
 
     saliency_cnn = build_model(MODEL_WEIGHTS, SALIENCY_MODEL)
 
-    train(saliency_cnn)
+    train(saliency_cnn, SALIENCY_MODEL)
