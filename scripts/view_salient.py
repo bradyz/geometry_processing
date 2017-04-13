@@ -13,12 +13,10 @@ GRID_FORMAT = '{}{}%s'.format(TO_SHOW, TO_SHOW)
 
 
 def denormalize(img):
-    return np.rint(np.clip(img * IMAGE_STD + IMAGE_MEAN, 0.0, 255.0))
+    return np.uint8(np.clip(img * IMAGE_STD + IMAGE_MEAN, 0.0, 255.0))
 
 
 def run(model, datagen):
-    plt.figure(1)
-
     for imgs, labels in datagen.generate():
         prediction = model.predict(imgs)
 
@@ -28,7 +26,9 @@ def run(model, datagen):
 
                 plt.subplot(GRID_FORMAT % (index + 1))
                 plt.title('%.3f/%.3f ' % (prediction[index][1], labels[index][1]))
-                plt.imshow(255.0 - denormalize(imgs[index]))
+                plt.imshow(denormalize(imgs[index]))
+                plt.xticks([])
+                plt.yticks([])
 
         plt.show()
 

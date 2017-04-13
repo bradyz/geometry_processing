@@ -3,12 +3,11 @@ from keras.callbacks import CSVLogger, ModelCheckpoint, ReduceLROnPlateau
 from keras.layers import Dense, Flatten, Input, Dropout
 from keras.optimizers import SGD
 from keras.models import Model
-import keras.backend as K
 
 from geometry_processing.globals import (TRAIN_DIR, VALID_DIR, MODEL_WEIGHTS,
         LOG_FILE, IMAGE_SIZE, NUM_CLASSES, IMAGE_MEAN, IMAGE_STD)
 from geometry_processing.utils.helpers import (get_data,
-        get_precomputed_statistics, samplewise_normalize)
+        get_precomputed_statistics, samplewise_normalize, load_weights)
 
 
 # Set to 2 when training on supercomputer (one line per epoch).
@@ -54,10 +53,12 @@ def train(model, save_to=''):
         model.save_weights(save_to)
 
 
-def load_model(weights_file=''):
-    img_input = Input(tensor=Input(shape=(IMAGE_SIZE, IMAGE_SIZE, 3)))
+def load_model(input_tensor=None, include_top=True):
+    if input_tensor is None:
+        input_tensor = Input(tensor=Input(shape=(IMAGE_SIZE, IMAGE_SIZE, 3)))
 
-    base_model = VGG16(include_top=False, input_tensor=img_input)
+    # Don't include VGG fc layers.
+    base_model = VGG16(include_top=False, input_tensor=input_tensor)
 
     # Freeze all layers in pretrained network.
     for layer in base_model.layers:
@@ -69,20 +70,30 @@ def load_model(weights_file=''):
     x = Dropout(0.5)(x)
     x = Dense(2048, activation='relu', name='fc2')(x)
     x = Dropout(0.5)(x)
-    x = Dense(NUM_CLASSES, activation='softmax', name='predictions')(x)
 
-    model = Model(input=img_input, output=x)
+    if include_top:
+        x = Dense(NUM_CLASSES, activation='softmax', name='predictions')(x)
 
-    if weights_file:
-        try:
-            print('Loading weights from %s.' % weights_file)
-            model.load_weights(weights_file, by_name=True)
-        except:
-            print('Loading failed. Starting from scratch.')
+    return Model(input=input_tensor, output=x)
 
-    return model
+
+def test(model, nb_batch=32, nb_worker=4):
+    model.compile(loss='categorical_crossentropy',
+                  optimizer='sgd',
+                  metrics=[])
+
+    # Center and normalize each sample.
+    normalize = samplewise_normalize(IMAGE_MEAN, IMAGE_STD)
+
+    # Get streaming data.
+    test_generator = get_data(VALID_DIR, preprocess=normalize)
+
+    return model.evaluate_generator(test_generator, nb_batch, nb_worker=nb_worker)
 
 
 if __name__ == '__main__':
-    cnn = load_model(MODEL_WEIGHTS)
-    train(cnn, MODEL_WEIGHTS)
+    mvcnn = load_model()
+    load_weights(mvcnn, MODEL_WEIGHTS)
+
+    # train(mvcnn, save_to=MODEL_WEIGHTS)
+    print("Test loss: %.3f" % test(mvcnn))

@@ -76,7 +76,7 @@ def resize_dataset(data, output_x, output_y):
     return result
 
 
-def get_data(data_path, batch=64, preprocess=None, shuffle=True):
+def get_data(data_path, batch=32, preprocess=None, shuffle=True):
     data_datagen = ImageDataGenerator(preprocessing_function=preprocess)
     return data_datagen.flow_from_directory(data_path,
             target_size=(IMAGE_SIZE, IMAGE_SIZE),
@@ -210,3 +210,12 @@ def extract_layer(full_model, layer):
 
 def entropy(x):
     return -np.sum(x * np.log(x + 1e-7))
+
+
+def load_weights(model, weights_file):
+    try:
+        print('Loading weights from %s.' % weights_file)
+        model.load_weights(weights_file, by_name=True)
+    except Exception as e:
+        print(e)
+        print('Loading failed. Starting from scratch.')
