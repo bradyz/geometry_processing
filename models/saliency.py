@@ -30,27 +30,41 @@ log_file = args.log_file
 
 def build_model(input_tensor=None):
     if input_tensor is None:
-        input_tensor = Input(tensor=Input(shape=(IMAGE_SIZE, IMAGE_SIZE, 3)))
+        input_tensor = Input(shape=(IMAGE_SIZE, IMAGE_SIZE, 3))
 
     mvcnn = multiview_cnn.load_model(input_tensor=input_tensor, include_top=False)
 
     x = mvcnn.output
     x = Dense(512, activation='relu',
-            b_regularizer=regularizers.l2(0.01), name='fc3')(x)
+            kernel_regularizer=regularizers.l2(0.01),
+            bias_regularizer=regularizers.l2(0.01), name='fc3')(x)
     x = Dropout(0.5)(x)
     x = Dense(256, activation='relu',
-            b_regularizer=regularizers.l2(0.01), name='fc4')(x)
+            kernel_regularizer=regularizers.l2(0.01),
+            bias_regularizer=regularizers.l2(0.01), name='fc4')(x)
     x = Dropout(0.5)(x)
     x = Dense(2, activation='softmax', name='saliency')(x)
 
     # Saliency predictor.
-    return Model(input=input_tensor, output=x)
+    return Model(inputs=input_tensor, outputs=x)
 
 
-def train(model, save_path, nb_epoch=5, nb_val_samples=1000):
+def train(model, save_path, nb_epoch=5, nb_val_samples=1000, batch_size=64):
     model.compile(loss='binary_crossentropy',
                   optimizer=SGD(lr=1e-3, momentum=0.9),
                   metrics=['accuracy'])
+
+    # Center and normalize each sample.
+    normalize = samplewise_normalize(IMAGE_MEAN, IMAGE_STD)
+
+    # Get streaming data.
+    train_generator = SaliencyDataGenerator(TRAIN_DIR, SALIENCY_DATA_TRAIN,
+            preprocess=normalize, batch_size=batch_size)
+    valid_generator = SaliencyDataGenerator(VALID_DIR, SALIENCY_DATA_VALID,
+            preprocess=normalize, batch_size=batch_size)
+
+    print('%d training samples.' % train_generator.nb_data)
+    print('%d validation samples.' % valid_generator.nb_data)
 
     # Various routines to run.
     callbacks = list()
@@ -66,27 +80,15 @@ def train(model, save_path, nb_epoch=5, nb_val_samples=1000):
 
     # Train.
     model.fit_generator(generator=train_generator.generate(),
-            samples_per_epoch=train_generator.nb_data,
-            nb_epoch=nb_epoch,
+            steps_per_epoch=train_generator.nb_data // batch_size,
+            epochs=nb_epoch,
             validation_data=valid_generator.generate(),
-            nb_val_samples=nb_val_samples,
+            validation_steps=nb_val_samples // batch_size,
             callbacks=callbacks,
             verbose=verbose)
 
 
 if __name__ == '__main__':
-    # Center and normalize each sample.
-    normalize = samplewise_normalize(IMAGE_MEAN, IMAGE_STD)
-
-    # Get streaming data.
-    train_generator = SaliencyDataGenerator(TRAIN_DIR, SALIENCY_DATA_TRAIN,
-            preprocess=normalize)
-    valid_generator = SaliencyDataGenerator(VALID_DIR, SALIENCY_DATA_VALID,
-            preprocess=normalize)
-
-    print('%d training samples.' % train_generator.nb_data)
-    print('%d validation samples.' % valid_generator.nb_data)
-
     # Build and load cached weights.
     saliency_cnn = build_model()
     load_weights(saliency_cnn, MODEL_WEIGHTS)
