@@ -22,7 +22,7 @@ generate_training = args.generate_training
 
 
 def generate(datagen, functor):
-    # Generate training data.
+    # Generate training data. 25 to ensure viewpoints are batched (hack).
     for full_paths, images in datagen.generate(25):
         predictions = functor([images, 0.0])[0]
 
@@ -45,10 +45,9 @@ if __name__ == '__main__':
 
     # # Use the fc activations as features.
     model = load_model(MODEL_WEIGHTS)
-    softmax_layer = model.get_layer('predictions').output
 
     # Wrapper around Tensorflow run operation.
     functor = K.function([model.layers[0].input, K.learning_phase()],
-                         [softmax_layer])
+                         [model.get_layer('predictions').output])
 
     generate(datagen, functor)

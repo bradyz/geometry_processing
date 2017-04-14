@@ -19,7 +19,7 @@ from geometry_processing.models import multiview_cnn
 parser = argparse.ArgumentParser(description='Train a saliency NN.')
 
 parser.add_argument('--verbose', required=False, type=int,
-        default=1, help='[1] for curses, [2] for infrequent.')
+        default=1, help='[1] for ncurses, [2] for per epoch.')
 parser.add_argument('--log_file', required=False, type=str,
         default='', help='File to log training, validation loss and accuracy.')
 
@@ -28,10 +28,11 @@ verbose = args.verbose
 log_file = args.log_file
 
 
-def build_model():
-    input_tensor = Input(tensor=Input(shape=(IMAGE_SIZE, IMAGE_SIZE, 3)))
-    mvcnn = multiview_cnn.load_model(input_tensor=input_tensor,
-            include_top=False)
+def build_model(input_tensor=None):
+    if input_tensor is None:
+        input_tensor = Input(tensor=Input(shape=(IMAGE_SIZE, IMAGE_SIZE, 3)))
+
+    mvcnn = multiview_cnn.load_model(input_tensor=input_tensor, include_top=False)
 
     x = mvcnn.output
     x = Dense(512, activation='relu',
@@ -46,7 +47,7 @@ def build_model():
     return Model(input=input_tensor, output=x)
 
 
-def train(model, save_path):
+def train(model, save_path, nb_epoch=5, nb_val_samples=1000):
     model.compile(loss='binary_crossentropy',
                   optimizer=SGD(lr=1e-3, momentum=0.9),
                   metrics=['accuracy'])
@@ -60,15 +61,15 @@ def train(model, save_path):
     if save_path:
         callbacks.append(ModelCheckpoint(filepath=save_path, verbose=1))
 
-    callbacks.append(ReduceLROnPlateau(monitor='val_loss', factor=0.1,
-        patience=1, min_lr=0.0001))
+    callbacks.append(ReduceLROnPlateau(monitor='val_loss', factor=0.5,
+        patience=0, min_lr=1e-5))
 
     # Train.
     model.fit_generator(generator=train_generator.generate(),
             samples_per_epoch=train_generator.nb_data,
-            nb_epoch=5,
+            nb_epoch=nb_epoch,
             validation_data=valid_generator.generate(),
-            nb_val_samples=1000,
+            nb_val_samples=nb_val_samples,
             callbacks=callbacks,
             verbose=verbose)
 

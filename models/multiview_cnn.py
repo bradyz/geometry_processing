@@ -12,7 +12,6 @@ from geometry_processing.utils.helpers import (get_data,
 
 # Set to 2 when training on supercomputer (one line per epoch).
 VERBOSITY = 2
-USE_SAVE = True
 
 
 def train(model, save_to=''):
@@ -26,23 +25,22 @@ def train(model, save_to=''):
     print('%d training samples.' % train_generator.n)
     print('%d validation samples.' % valid_generator.n)
 
-    optimizer = SGD(lr=0.01, momentum=0.01)
     model.compile(loss='categorical_crossentropy',
-                  optimizer=optimizer,
+                  optimizer=SGD(lr=1e-3, momentum=0.9),
                   metrics=['accuracy'])
 
     callbacks = list()
 
     callbacks.append(CSVLogger(LOG_FILE))
     callbacks.append(ReduceLROnPlateau(monitor='val_loss', factor=0.1,
-        patience=2, min_lr=0.0001))
+        patience=0, min_lr=0.0001))
 
     if save_to:
         callbacks.append(ModelCheckpoint(filepath=MODEL_WEIGHTS, verbose=1))
 
     model.fit_generator(generator=train_generator,
             samples_per_epoch=train_generator.n,
-            nb_epoch=5,
+            nb_epoch=2,
             validation_data=valid_generator,
             nb_val_samples=1000,
             callbacks=callbacks,
@@ -77,23 +75,30 @@ def load_model(input_tensor=None, include_top=True):
     return Model(input=input_tensor, output=x)
 
 
-def test(model, nb_batch=32, nb_worker=4):
-    model.compile(loss='categorical_crossentropy',
-                  optimizer='sgd',
-                  metrics=[])
+def test(model, nb_batch=64, nb_worker=1):
+    # Optimizer is unused.
+    model.compile(loss='categorical_crossentropy', optimizer='sgd',
+                  metrics=['accuracy'])
 
     # Center and normalize each sample.
     normalize = samplewise_normalize(IMAGE_MEAN, IMAGE_STD)
 
     # Get streaming data.
-    test_generator = get_data(VALID_DIR, preprocess=normalize)
+    test_generator = get_data(VALID_DIR, batch=nb_batch, preprocess=normalize)
 
-    return model.evaluate_generator(test_generator, nb_batch, nb_worker=nb_worker)
+    print("Batches: %d" % nb_batch)
+    print("Number batches: %d" % (test_generator.n // nb_batch + 1))
+
+    return model.evaluate_generator(test_generator,
+            test_generator.n // nb_batch, nb_worker=nb_worker)
 
 
 if __name__ == '__main__':
     mvcnn = load_model()
     load_weights(mvcnn, MODEL_WEIGHTS)
 
+    # print("Log file: %s" % LOG_FILE)
     # train(mvcnn, save_to=MODEL_WEIGHTS)
-    print("Test loss: %.3f" % test(mvcnn))
+
+    loss, accuracy = test(mvcnn)
+    print("Test loss: %.5f Test accuracy: %.5f" % (loss, accuracy))
