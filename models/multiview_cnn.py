@@ -1,5 +1,3 @@
-import argparse
-
 import numpy as np
 
 from sklearn.metrics import confusion_matrix
@@ -16,17 +14,8 @@ from geometry_processing.utils.helpers import (get_data, samplewise_normalize,
         load_weights)
 
 
-# Command line arguments.
-parser = argparse.ArgumentParser(description='Train or test a cnn.')
-
-parser.add_argument('--verbose', required=False, type=int, default=1,
-        help='[1] for curses, [2] for one per epoch.')
-parser.add_argument('--matrix_path', required=False, type=str, default='',
-        help='Path (without extension) to save the matrix from test time.')
-
-args = parser.parse_args()
-verbose = args.verbose
-matrix_path = args.matrix_path
+# Set to 2 on supercomputer during training.
+VERBOSE = 1
 
 
 def train(model, save_to=''):
@@ -59,7 +48,7 @@ def train(model, save_to=''):
             validation_data=valid_generator,
             nb_val_samples=1000,
             callbacks=callbacks,
-            verbose=verbose)
+            verbose=VERBOSE)
 
     # Save the weights on completion.
     if save_to:
@@ -126,13 +115,5 @@ if __name__ == '__main__':
     mvcnn = load_model()
     load_weights(mvcnn, MODEL_WEIGHTS)
 
-    # print("Log file: %s" % LOG_FILE)
-    # train(mvcnn, save_to=MODEL_WEIGHTS)
-
-    matrix = test(mvcnn)
-    print('Accuracy %.4f' % np.mean(np.diag(matrix) / np.sum(matrix, axis=1)))
-
-    # Save matrix to disk.
-    if matrix_path:
-        print('Saving to %s.' % matrix_path)
-        np.save(matrix_path, matrix)
+    print("Log file: %s" % LOG_FILE)
+    train(mvcnn, save_to=MODEL_WEIGHTS)
