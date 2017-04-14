@@ -1,3 +1,9 @@
+import argparse
+
+import numpy as np
+
+from sklearn.metrics import confusion_matrix
+
 from keras.applications.vgg16 import VGG16
 from keras.callbacks import CSVLogger, ModelCheckpoint, ReduceLROnPlateau
 from keras.layers import Dense, Flatten, Input, Dropout
@@ -6,12 +12,21 @@ from keras.models import Model
 
 from geometry_processing.globals import (TRAIN_DIR, VALID_DIR, MODEL_WEIGHTS,
         LOG_FILE, IMAGE_SIZE, NUM_CLASSES, IMAGE_MEAN, IMAGE_STD)
-from geometry_processing.utils.helpers import (get_data,
-        get_precomputed_statistics, samplewise_normalize, load_weights)
+from geometry_processing.utils.helpers import (get_data, samplewise_normalize,
+        load_weights)
 
 
-# Set to 2 when training on supercomputer (one line per epoch).
-VERBOSITY = 2
+# Command line arguments.
+parser = argparse.ArgumentParser(description='Train or test a cnn.')
+
+parser.add_argument('--verbose', required=False, type=int, default=1,
+        help='[1] for curses, [2] for one per epoch.')
+parser.add_argument('--matrix_path', required=False, type=str, default='',
+        help='Path (without extension) to save the matrix from test time.')
+
+args = parser.parse_args()
+verbose = args.verbose
+matrix_path = args.matrix_path
 
 
 def train(model, save_to=''):
@@ -44,7 +59,7 @@ def train(model, save_to=''):
             validation_data=valid_generator,
             nb_val_samples=1000,
             callbacks=callbacks,
-            verbose=VERBOSITY)
+            verbose=verbose)
 
     # Save the weights on completion.
     if save_to:
@@ -53,7 +68,7 @@ def train(model, save_to=''):
 
 def load_model(input_tensor=None, include_top=True):
     if input_tensor is None:
-        input_tensor = Input(tensor=Input(shape=(IMAGE_SIZE, IMAGE_SIZE, 3)))
+        input_tensor = Input(shape=(IMAGE_SIZE, IMAGE_SIZE, 3))
 
     # Don't include VGG fc layers.
     base_model = VGG16(include_top=False, input_tensor=input_tensor)
@@ -72,10 +87,10 @@ def load_model(input_tensor=None, include_top=True):
     if include_top:
         x = Dense(NUM_CLASSES, activation='softmax', name='predictions')(x)
 
-    return Model(input=input_tensor, output=x)
+    return Model(inputs=input_tensor, outputs=x)
 
 
-def test(model, nb_batch=64, nb_worker=1):
+def test(model, nb_batch=32, nb_worker=2):
     # Optimizer is unused.
     model.compile(loss='categorical_crossentropy', optimizer='sgd',
                   metrics=['accuracy'])
@@ -87,13 +102,24 @@ def test(model, nb_batch=64, nb_worker=1):
     test_generator = get_data(VALID_DIR, batch=nb_batch, shuffle=True,
             preprocess=normalize)
 
-    nb_steps = int(round(test_generator.n // nb_batch))
+    matrix = np.zeros((NUM_CLASSES, NUM_CLASSES))
 
-    print("Batches: %d" % nb_batch)
-    print("Number batches: %d" % nb_steps)
-    print("Total samples: %d" % nb_steps * nb_batch)
+    # Flag that batch_index at 0 has been seen.
+    start = False
 
-    return model.evaluate_generator(test_generator, nb_steps, nb_worker=nb_worker)
+    while not start or test_generator.batch_index != 0:
+        start = True
+
+        # Grab the next batch.
+        x, y_true = test_generator.next()
+
+        # Convert probabilities to predictions.
+        y_true = np.argmax(y_true, axis=1)
+        y_pred = np.argmax(model.predict_on_batch(x), axis=1)
+
+        matrix += confusion_matrix(y_true, y_pred, labels=range(NUM_CLASSES))
+
+    return matrix
 
 
 if __name__ == '__main__':
@@ -103,5 +129,10 @@ if __name__ == '__main__':
     # print("Log file: %s" % LOG_FILE)
     # train(mvcnn, save_to=MODEL_WEIGHTS)
 
-    loss, accuracy = test(mvcnn)
-    print("Test loss: %.5f Test accuracy: %.5f" % (loss, accuracy))
+    matrix = test(mvcnn)
+    print('Accuracy %.4f' % np.mean(np.diag(matrix) / np.sum(matrix, axis=1)))
+
+    # Save matrix to disk.
+    if matrix_path:
+        print('Saving to %s.' % matrix_path)
+        np.save(matrix_path, matrix)
