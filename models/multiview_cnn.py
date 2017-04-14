@@ -84,13 +84,16 @@ def test(model, nb_batch=64, nb_worker=1):
     normalize = samplewise_normalize(IMAGE_MEAN, IMAGE_STD)
 
     # Get streaming data.
-    test_generator = get_data(VALID_DIR, batch=nb_batch, preprocess=normalize)
+    test_generator = get_data(VALID_DIR, batch=nb_batch, shuffle=True,
+            preprocess=normalize)
+
+    nb_steps = int(round(test_generator.n // nb_batch))
 
     print("Batches: %d" % nb_batch)
-    print("Number batches: %d" % (test_generator.n // nb_batch + 1))
+    print("Number batches: %d" % nb_steps)
+    print("Total samples: %d" % nb_steps * nb_batch)
 
-    return model.evaluate_generator(test_generator,
-            test_generator.n // nb_batch, nb_worker=nb_worker)
+    return model.evaluate_generator(test_generator, nb_steps, nb_worker=nb_worker)
 
 
 if __name__ == '__main__':
