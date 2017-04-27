@@ -1,5 +1,7 @@
 import argparse
 
+import numpy as np
+
 from geometry_processing.globals import MODEL_WEIGHTS
 from geometry_processing.utils.helpers import load_weights
 from geometry_processing.models.multiview_cnn import load_model, test
