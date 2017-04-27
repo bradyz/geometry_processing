@@ -178,6 +178,7 @@ class SaliencyDataGenerator:
                 self.data.append((path, label))
 
         self.nb_data = len(self.data)
+        self.epochs_seen = 0
 
 
     def generate(self):
@@ -208,8 +209,11 @@ class SaliencyDataGenerator:
 
                 next_spot = (next_spot + 1) % self.nb_data
 
-            yield x, y
+                # Completed an epoch.
+                if next_spot == 0:
+                    self.epochs_seen += 1
 
+            yield x, y
 
 
 if __name__ == "__main__":
