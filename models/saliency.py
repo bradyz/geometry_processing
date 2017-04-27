@@ -49,7 +49,7 @@ def build_model(input_tensor=None):
     return Model(inputs=input_tensor, outputs=x)
 
 
-def train(model, save_path, nb_epoch=5, nb_val_samples=1000, batch_size=64):
+def train(model, save_path, nb_epoch=10, nb_val_samples=1000, batch_size=64):
     model.compile(loss='binary_crossentropy',
                   optimizer=SGD(lr=1e-3, momentum=0.9),
                   metrics=['accuracy'])
@@ -92,7 +92,6 @@ if __name__ == '__main__':
     # Build and load cached weights.
     saliency_cnn = build_model()
     load_weights(saliency_cnn, MODEL_WEIGHTS)
-    # load_weights(saliency_cnn, SALIENCY_MODEL)
 
     # Update model.
     train(saliency_cnn, save_path=SALIENCY_MODEL)

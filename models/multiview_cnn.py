@@ -40,7 +40,7 @@ def train(model, save_to=''):
         patience=0, min_lr=0.0001))
 
     if save_to:
-        callbacks.append(ModelCheckpoint(filepath=MODEL_WEIGHTS, verbose=1))
+        callbacks.append(ModelCheckpoint(filepath=save_to, verbose=1))
 
     model.fit_generator(generator=train_generator,
             samples_per_epoch=train_generator.n,

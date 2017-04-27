@@ -14,25 +14,39 @@ parser = argparse.ArgumentParser(description='Generate saliency data.')
 
 parser.add_argument('--confidence_threshold', required=False, type=float,
         default=0.7, help='Value from [0, inf]. Lower is more confident.')
-parser.add_argument('--generate_training', required=True, type=int,
-        help='[1] for training, [2] for validation.')
+parser.add_argument('--pick_top', required=False, type=int,
+        default=-1, help='Value from [-1, num_views].')
+parser.add_argument('--generate_dataset', required=True, type=str,
+        help='train/test')
 
 args = parser.parse_args()
 confidence_threshold = args.confidence_threshold
-generate_training = args.generate_training
+pick_top = args.pick_top
+generate_dataset = args.generate_dataset
 
 
+# Set pick_top to -1 if thresholding by entropy value.
 def generate(datagen, functor):
     # Generate training data. 25 to ensure viewpoints are batched (hack).
     for full_paths, images in datagen.generate(25):
         # 0 means test mode (turn off dropout).
         predictions = functor([images, 0])[0]
 
-        for i in range(predictions.shape[0]):
-            if entropy(predictions[i]) <= confidence_threshold:
-                print(full_paths[i], 1.0)
-            else:
-                print(full_paths[i], 0.0)
+        if pick_top > -1:
+            paths_predictions = list(zip(full_paths, predictions))
+            paths_predictions.sort(key=lambda x: entropy(x[1]))
+
+            for i, path_prediction in enumerate(paths_predictions):
+                if i < pick_top:
+                    print(path_prediction[0], 1.0)
+                else:
+                    print(path_prediction[0], 0.0)
+        else:
+            for i in range(predictions.shape[0]):
+                if entropy(predictions[i]) <= confidence_threshold:
+                    print(full_paths[i], 1.0)
+                else:
+                    print(full_paths[i], 0.0)
 
 
 if __name__ == '__main__':
@@ -40,10 +54,12 @@ if __name__ == '__main__':
     img_normalize = samplewise_normalize(IMAGE_MEAN, IMAGE_STD)
 
     # Directory of images.
-    if generate_training == 1:
+    if generate_dataset == 'train':
         datagen = FilenameImageDatagen(TRAIN_DIR, preprocess=img_normalize)
-    elif generate_training == 2:
+    elif generate_dataset == 'test':
         datagen = FilenameImageDatagen(VALID_DIR, preprocess=img_normalize)
+    else:
+        raise ValueError('Invalid input for --generate_dataset.')
 
     # # Use the fc activations as features.
     model = load_model()
